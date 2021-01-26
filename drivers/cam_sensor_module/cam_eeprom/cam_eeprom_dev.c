@@ -9,6 +9,10 @@
 #include "cam_eeprom_core.h"
 #include "cam_debug_util.h"
 #include "camera_main.h"
+/*Begin zihao.li for [Task][10684510] brementf add dual camera calibration on 20210129*/
+DEVICE_ATTR(calibration_flag, 0664, cam_eeprom_dualcamcali_flag_show, cam_eeprom_dualcamcali_flag_store);
+DEVICE_ATTR(calibration_data, 0664, cam_eeprom_dualcamcali_data_show, cam_eeprom_dualcamcali_data_store);
+/*End   zihao.li for [Task][10684510] brementf add dual camera calibration on 20210129*/
 
 static int cam_eeprom_subdev_close_internal(struct v4l2_subdev *sd,
 	struct v4l2_subdev_fh *fh)
@@ -479,6 +483,24 @@ static int cam_eeprom_component_bind(struct device *dev,
 		CAM_ERR(CAM_EEPROM, "failed: soc init rc %d", rc);
 		goto free_soc;
 	}
+
+	/*Begin zihao.li for [Task][10684510] brementf add dual camera calibration on 20210129*/
+	CAM_INFO(CAM_EEPROM, "eeprom pdev->id=%d eeprom_name:%s pdev->name:%s dev_name:%s,index:%d",
+		pdev->id,
+		soc_private->eeprom_name,
+		pdev->name,
+		e_ctrl->soc_info.dev_name,
+		e_ctrl->soc_info.index);
+
+
+	if (e_ctrl->soc_info.index == TCT_EPPROM_CELL_INDEX){
+		rc = device_create_file(&pdev->dev, &dev_attr_calibration_data);
+		CAM_INFO(CAM_EEPROM, "creat calibration data sys node rc=%d", rc);
+		rc = device_create_file(&pdev->dev, &dev_attr_calibration_flag);
+		CAM_INFO(CAM_EEPROM, "creat calibration flag sys node rc=%d", rc);
+	}
+	/*End   zihao.li for [Task][10684510] brementf add dual camera calibration on 20210129*/
+
 	rc = cam_eeprom_update_i2c_info(e_ctrl, &soc_private->i2c_info);
 	if (rc) {
 		CAM_ERR(CAM_EEPROM, "failed: to update i2c info rc %d", rc);
@@ -522,6 +544,15 @@ static void cam_eeprom_component_unbind(struct device *dev,
 		CAM_ERR(CAM_EEPROM, "eeprom device is NULL");
 		return;
 	}
+
+	/*Begin zihao.li for [Task][10684510] brementf add dual camera calibration on 20210129*/
+	if(e_ctrl->soc_info.index == TCT_EPPROM_CELL_INDEX){
+		device_remove_file(&pdev->dev, &dev_attr_calibration_data);
+		CAM_INFO(CAM_EEPROM, "remove calibration node");
+		device_remove_file(&pdev->dev, &dev_attr_calibration_flag);
+		CAM_INFO(CAM_EEPROM, "remove calibration flag node");
+	}
+	/*End   zihao.li for [Task][10684510] brementf add dual camera calibration on 20210129*/
 
 	CAM_DBG(CAM_EEPROM, "Component unbind called for: %s", pdev->name);
 	soc_info = &e_ctrl->soc_info;

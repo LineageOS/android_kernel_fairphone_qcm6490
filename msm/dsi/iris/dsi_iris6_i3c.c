@@ -23,8 +23,6 @@
 
 /*iris i2c handle*/
 static struct i2c_client  *iris_i2c_handle;
-/*sw clean path ctrl*/
-static void _iris_ctrl_scp(bool en);
 
 static void __iris_i2c_buf_init(void)
 {
@@ -168,9 +166,7 @@ int iris_ioctl_i2c_read(uint32_t addr, uint32_t *pval)
 {
 	int ret = -1;
 
-	_iris_ctrl_scp(0);
 	ret = iris_i2c_read(addr, pval, 1);
-	_iris_ctrl_scp(1);
 
 	return ret;
 }
@@ -469,27 +465,6 @@ error:
 	vfree(i2c_msg);
 	i2c_msg = NULL;
 	return ret;
-}
-
-static void _iris_ctrl_scp(bool en)
-{
-	u32 val = 0;
-	uint32_t *data = NULL;
-
-	data = iris_get_ipopt_payload_data(IRIS_IP_SYS, ID_SYS_DMA_TRIG_CTRL, 2);
-	if (!data) {
-		IRIS_LOGE("%s, can not find the dest ip[%d] opt[%d]", __func__, IRIS_IP_SYS, ID_SYS_DMA_TRIG_CTRL);
-		return;
-	}
-	IRIS_LOGD("%s, dma_trig_gen_ctrl is 0x%08x", __func__, data[0]);
-
-	if (en)
-		val = data[0] & ~(0x00000800);
-	else
-		val = data[0] | (0x00000800);
-
-	IRIS_LOGD("%s, en is %d, val is 0x%08x", __func__, en, val);
-	//iris_ioctl_i2c_write(0xF000005C, val);
 }
 
 static int iris_i2c_probe(struct i2c_client *client,

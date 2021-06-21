@@ -389,7 +389,8 @@ static int _iris_configure(u32 type, u32 value)
 		//	iris_hdr_csc_complete(value);
 		//else if (value >= 2)
 			iris_hdr_csc_complete(value);
-
+			IRIS_LOGE("hdr complete and ensure dport enable again");
+			iris_dport_disable(0x0, 0x1);
 		/*if (value != 2 && value != 4) {
 			if (pqlt_cur_setting->pq_setting.sdr2hdr == SDR2HDR_Bypass)
 				iris_panel_nits_set(0, true, value);

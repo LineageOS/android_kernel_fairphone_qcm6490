@@ -620,6 +620,8 @@ int iris_lp_abyp_enter(bool blocking)
 	IRIS_LOGI("%s, frame_interval is %d ms", __func__, frame_interval);
 	IRIS_LOGI("Enter abyp mode start, blocking: %d", blocking);
 
+	iris_dma_ch1_trigger(false, 0);
+
 	if (pcfg->rx_mode == 1) {
 		if (pcfg->lp_ctrl.qsync_mode && pcfg->lp_ctrl.dynamic_power) {
 			/* change dma ch1 trigger src sel to SW manual mode */
@@ -822,6 +824,7 @@ exit_abyp_loop:
 	}
 
 
+	iris_dma_ch1_trigger(true, 0);
 	IRIS_LOGI("Exit abyp spend time %d us",
 		(u32)ktime_to_us(ktime_get()) - (u32)ktime_to_us(lp_ktime0));
 

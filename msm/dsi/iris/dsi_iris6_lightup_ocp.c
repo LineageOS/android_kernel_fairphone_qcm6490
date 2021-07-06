@@ -1148,8 +1148,6 @@ int iris_abyp_send_panel_cmd(struct dsi_panel *panel,
 		return -EINVAL;
 	}
 
-	if (cmdset->count)
-		vc_id = cmdset->cmds[0].msg.channel;
 	iris_dsi_send_cmds(panel, cmdset->cmds,
 			cmdset->count, cmdset->state, vc_id);
 	return 0;

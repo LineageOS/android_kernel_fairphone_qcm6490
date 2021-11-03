@@ -722,18 +722,9 @@ static void _iris_proc_timing_switch(struct iris_cfg *pcfg)
 static int _iris_dphy_itf_check(void)
 {
 	int ret = 0;
-	u32 dphy_itf_ctrl, sw_pwr_ctrl, value;
-	uint32_t *data = NULL;
+	u32 dphy_itf_ctrl, value;
 
 	dphy_itf_ctrl = 0xF1100000;
-	sw_pwr_ctrl = 0xF000003C;
-
-	data = iris_get_ipopt_payload_data(IRIS_IP_SYS, ID_SYS_MPG_CTRL, 2);
-	if (!data) {
-		IRIS_LOGE("%s, can not find the dest ip[%d] opt[%d]", __func__, IRIS_IP_SYS, ID_SYS_MPG_CTRL);
-		return -1;
-	}
-	IRIS_LOGD("%s, sw_pwr_ctrl is 0x%08x", __func__, data[0]);
 
 	ret = iris_ioctl_i2c_read(dphy_itf_ctrl, &value);
 	if (ret) {
@@ -743,8 +734,8 @@ static int _iris_dphy_itf_check(void)
 
 	if (value & 0x10000000) {
 		IRIS_LOGE("%s, dphy_itf_ctrl is 0x%08x", __func__, value);
-		iris_ioctl_i2c_write(sw_pwr_ctrl, 0x1);
-		iris_ioctl_i2c_write(sw_pwr_ctrl, data[0]);
+		iris_ioctl_i2c_write(dphy_itf_ctrl, (value | 0x01000000));
+		iris_ioctl_i2c_write(dphy_itf_ctrl, value);
 	}
 
 	return 0;

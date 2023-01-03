@@ -66,3 +66,4 @@ obj-$(CONFIG_PROFILER)			+= profiler.o
 obj-$(CONFIG_WIGIG_SENSING_SPI)	+= wigig_sensing.o
 obj-$(CONFIG_HISI_HIKEY_USB)	+= hisi_hikey_usb.o
 obj-$(CONFIG_AWINIC_HAPTIC_HV)	+= haptic_hv/
+obj-$(CONFIG_BSP_PUBLIC_INTERFACES)	+= bsp_public_interfaces.o

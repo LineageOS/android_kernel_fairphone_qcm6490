@@ -6,7 +6,9 @@
 struct board_platform_data {
 
 	struct kobject * sysinfo_kobj;
-
+#ifdef CONFIG_ESIM_REGULATOR_ON
+	struct regulator *esim_power;
+#endif
 	const char *name;
 
 	unsigned board_id0;

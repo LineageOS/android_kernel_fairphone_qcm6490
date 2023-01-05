@@ -24,6 +24,9 @@
 #include <asm/uaccess.h>
 #include <soc/qcom/socinfo.h>
 #include <linux/bsp_public_interfaces.h>
+#ifdef CONFIG_ESIM_REGULATOR_ON
+#include <linux/regulator/consumer.h>
+#endif
 
 struct board_platform_data *pdata;
 
@@ -252,8 +255,27 @@ static int bsp_public_interfaces_probe(struct platform_device * pdev)
 		}
 	}
     board_check_hwid(pdata);
+#ifdef CONFIG_ESIM_REGULATOR_ON
+	pdata->esim_power = regulator_get(&pdev->dev, "esim_regulator");
+		if (IS_ERR(pdata->esim_power)) {
+			printk("regulator_get regulator fail\n");
+			//return -EINVAL;
+		}
+		else {
+	    	ret = regulator_set_voltage(pdata->esim_power, 1810000, 1810000); 
+	    		if (ret)
+	    		{
+	        		printk("Could not set to 1.81v.\n");
+	    		}
+		}
 
-	printk("####Board id detect Probe Success####\n");
+	ret = regulator_enable(pdata->esim_power); 
+	    	if (ret)
+	    	{
+			dev_err(&pdev->dev, "%s: Could not enable esim regulator.\n", __func__);
+	    	}
+#endif
+	printk("####BSP public interface Probe Success####\n");
 	return 0;
 
 destroy_sysfs:
@@ -272,7 +294,9 @@ static int bsp_public_interfaces_remove(struct platform_device *pdev)
 	gpio_free(pdata->board_id1);
 	gpio_free(pdata->board_id2);
 	gpio_free(pdata->board_id3);
-
+#ifdef CONFIG_ESIM_REGULATOR_ON
+	regulator_disable(pdata->esim_power); 
+#endif
 	for (attr_count = 0; attr_count < ARRAY_SIZE(sysfs_attrs); attr_count++) {
 		sysfs_remove_file(&pdev->dev.kobj, &sysfs_attrs[attr_count].attr);
 	}

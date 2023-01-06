@@ -275,7 +275,7 @@ static int ptn36502_probe(struct i2c_client *client, const struct i2c_device_id 
 	//gpio_direction_output(redriver_en,1); //zxz add , the en pin need hi-z status
 
 
-	ptn_write_reg(0x0b, 0x21);
+	ptn_write_reg(0x0b, 0x01);
 	// ptn_write_reg(0x07, 0x29);
 	// ptn_write_reg(0x08, 0x29);
 	// ptn_write_reg(0x09, 0x29);

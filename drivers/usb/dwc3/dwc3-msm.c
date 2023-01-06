@@ -3436,6 +3436,12 @@ static int dwc3_msm_suspend(struct dwc3_msm *mdwc, bool force_power_collapse,
 	return 0;
 }
 
+/* zxz add for USB redriver ptn36502 ,begin */
+#if 1
+extern void ptn_usb_orientation_switch(int cc_orient);
+#endif
+/* zxz add for USB redriver ptn36502 ,end */
+
 static int dwc3_msm_resume(struct dwc3_msm *mdwc)
 {
 	int ret;
@@ -3444,6 +3450,23 @@ static int dwc3_msm_resume(struct dwc3_msm *mdwc)
 	struct usb_irq *uirq;
 
 	dev_dbg(mdwc->dev, "%s: exiting lpm\n", __func__);
+
+/* zxz add for USB redriver ptn36502 ,begin */
+#if 1
+	if (!mdwc->usb_psy) {
+		mdwc->usb_psy = power_supply_get_by_name("usb");
+		if (!mdwc->usb_psy) {
+			dev_err(mdwc->dev, "dwc3_msm_resume Could not get usb psy\n");
+			return -ENODEV;
+		}
+	}
+
+	power_supply_get_property(mdwc->usb_psy,POWER_SUPPLY_PROP_TYPEC_CC_ORIENTATION, &pval);
+	value = pval.intval;
+	pr_err("zxz-------dwc3_msm_resume-----orientaiton=%d---\n",value);
+	//ptn_usb_orientation_switch(value);
+#endif
+/* zxz add for USB redriver ptn36502 ,end */
 
 	/*
 	 * If h/w exited LPM without any events, ensure

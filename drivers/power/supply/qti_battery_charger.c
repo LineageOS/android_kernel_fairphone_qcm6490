@@ -114,6 +114,7 @@ enum usb_property_id {
 	USB_REAL_TYPE,
 	USB_TYPEC_COMPLIANT,
 	USB_SCOPE,
+	USB_TYPEC_CC_ORIENTATION,/*zxzcc add for typec cc orientation*/
 	USB_CONNECTOR_TYPE,
 	USB_PROP_MAX,
 };
@@ -294,6 +295,7 @@ static const int usb_prop_map[USB_PROP_MAX] = {
 	[USB_ADAP_TYPE]		= POWER_SUPPLY_PROP_USB_TYPE,
 	[USB_TEMP]		= POWER_SUPPLY_PROP_TEMP,
 	[USB_SCOPE]		= POWER_SUPPLY_PROP_SCOPE,
+	[USB_TYPEC_CC_ORIENTATION]		= POWER_SUPPLY_PROP_TYPEC_CC_ORIENTATION,/*zxzcc add for typec cc orientation*/
 };
 
 static const int wls_prop_map[WLS_PROP_MAX] = {
@@ -1006,6 +1008,7 @@ static enum power_supply_property usb_props[] = {
 	POWER_SUPPLY_PROP_USB_TYPE,
 	POWER_SUPPLY_PROP_TEMP,
 	POWER_SUPPLY_PROP_SCOPE,
+	POWER_SUPPLY_PROP_TYPEC_CC_ORIENTATION,/*zxzcc add for typec cc orientation*/
 };
 
 static enum power_supply_usb_type usb_psy_supported_types[] = {

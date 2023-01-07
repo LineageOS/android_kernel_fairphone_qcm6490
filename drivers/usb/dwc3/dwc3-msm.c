@@ -3448,6 +3448,9 @@ static int dwc3_msm_resume(struct dwc3_msm *mdwc)
 	long core_clk_rate;
 	struct dwc3 *dwc = platform_get_drvdata(mdwc->dwc3);
 	struct usb_irq *uirq;
+	int value = 0;
+	union power_supply_propval pval = {0};
+
 
 	dev_dbg(mdwc->dev, "%s: exiting lpm\n", __func__);
 

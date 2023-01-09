@@ -967,14 +967,14 @@ SND_SOC_DAILINK_DEFS(quat_mi2s_tx,
 
 SND_SOC_DAILINK_DEFS(quin_mi2s_rx,
 	DAILINK_COMP_ARRAY(COMP_CPU("msm-dai-q6-mi2s.8")),
-	DAILINK_COMP_ARRAY(COMP_CODEC("aw882xx_smartpa.1-0034", "aw882xx-aif-1-34"),
-			   COMP_CODEC("aw882xx_smartpa.1-0035", "aw882xx-aif-1-35")),
+	DAILINK_COMP_ARRAY(COMP_CODEC("aw882xx_smartpa_0", "aw882xx-aif-0"),
+			   COMP_CODEC("aw882xx_smartpa_1", "aw882xx-aif-1")),
 	DAILINK_COMP_ARRAY(COMP_PLATFORM("msm-pcm-routing")));
 
 SND_SOC_DAILINK_DEFS(quin_mi2s_tx,
 	DAILINK_COMP_ARRAY(COMP_CPU("msm-dai-q6-mi2s.9")),
-	DAILINK_COMP_ARRAY(COMP_CODEC("aw882xx_smartpa.1-0034", "aw882xx-aif-1-34"),
-			   COMP_CODEC("aw882xx_smartpa.1-0035", "aw882xx-aif-1-35")),
+	DAILINK_COMP_ARRAY(COMP_CODEC("aw882xx_smartpa_0", "aw882xx-aif-0"),
+			   COMP_CODEC("aw882xx_smartpa_1", "aw882xx-aif-1")),
 	DAILINK_COMP_ARRAY(COMP_PLATFORM("msm-pcm-routing")));
 
 SND_SOC_DAILINK_DEFS(sen_mi2s_rx,

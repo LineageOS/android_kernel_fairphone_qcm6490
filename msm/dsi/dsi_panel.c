@@ -312,7 +312,7 @@ exit:
 static int dsi_panel_set_pinctrl_state(struct dsi_panel *panel, bool enable)
 {
 	int rc = 0;
-	struct pinctrl_state *state;
+	struct pinctrl_state *state = NULL;
 
 	if (panel->host_config.ext_bridge_mode)
 		return 0;
@@ -320,15 +320,22 @@ static int dsi_panel_set_pinctrl_state(struct dsi_panel *panel, bool enable)
 	if (!panel->pinctrl.pinctrl)
 		return 0;
 
-	if (enable)
-		state = panel->pinctrl.active;
-	else
-		state = panel->pinctrl.suspend;
+	if (enable) {
+		if(!IS_ERR_OR_NULL(panel->pinctrl.active)) {
+			state = panel->pinctrl.active;			
+		}
+	}
+	else {
+		if(!IS_ERR_OR_NULL(panel->pinctrl.suspend)) {
+			state = panel->pinctrl.suspend;			
+		}
+	}
 
-	rc = pinctrl_select_state(panel->pinctrl.pinctrl, state);
-	if (rc)
-		DSI_ERR("[%s] failed to set pin state, rc=%d\n",
-				panel->name, rc);
+	if(state){
+		rc = pinctrl_select_state(panel->pinctrl.pinctrl, state);
+		if (rc)
+			DSI_ERR("[%s] failed to set pin state, rc=%d\n", panel->name, rc);
+	}
 
 	return rc;
 }
@@ -495,18 +502,18 @@ static int dsi_panel_pinctrl_init(struct dsi_panel *panel)
 	panel->pinctrl.active = pinctrl_lookup_state(panel->pinctrl.pinctrl,
 						       "panel_active");
 	if (IS_ERR_OR_NULL(panel->pinctrl.active)) {
-		rc = PTR_ERR(panel->pinctrl.active);
+		//rc = PTR_ERR(panel->pinctrl.active);
 		DSI_ERR("failed to get pinctrl active state, rc=%d\n", rc);
-		goto error;
+		//goto error;
 	}
 
 	panel->pinctrl.suspend =
 		pinctrl_lookup_state(panel->pinctrl.pinctrl, "panel_suspend");
 
 	if (IS_ERR_OR_NULL(panel->pinctrl.suspend)) {
-		rc = PTR_ERR(panel->pinctrl.suspend);
+		//rc = PTR_ERR(panel->pinctrl.suspend);
 		DSI_ERR("failed to get pinctrl suspend state, rc=%d\n", rc);
-		goto error;
+		//goto error;
 	}
 
 	panel->pinctrl.pwm_pin =

@@ -151,6 +151,7 @@ struct dsi_panel_reset_config {
 
 	int reset_gpio;
 	int disp_en_gpio;
+int px8618_reset_gpio;		
 	int lcd_mode_sel_gpio;
 	u32 mode_sel_state;
 };

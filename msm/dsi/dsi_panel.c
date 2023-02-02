@@ -129,17 +129,6 @@ static int dsi_panel_gpio_request(struct dsi_panel *panel)
 		}
 	}
 
-//zmw Temporarily configure gpio
- 	if (gpio_is_valid(r_config->px8618_reset_gpio)) {
-DSI_ERR("zmw---dsi_panel_gpio_request\n");
-		rc = gpio_request(r_config->px8618_reset_gpio, "px8618_reset_gpio");
-		if (rc) {
-			DSI_ERR("request for px8618_reset_gpio failed, rc=%d\n", rc);
-			goto error_release_reset;
-		}
-DSI_ERR("zmw---dsi_panel_gpio_output\n");		
-gpio_direction_output(r_config->px8618_reset_gpio, 1);		
-	}
 	if (gpio_is_valid(panel->bl_config.en_gpio)) {
 		rc = gpio_request(panel->bl_config.en_gpio, "bklt_en_gpio");
 		if (rc) {
@@ -2274,15 +2263,6 @@ static int dsi_panel_parse_gpios(struct dsi_panel *panel)
 		}
 	}
 
-//zmw Temporarily configure gpio
-	panel->reset_config.px8618_reset_gpio =
-			utils->get_named_gpio(utils->data,
-				"qcom,platform-px8618-reset", 0);
-	if (!gpio_is_valid(panel->reset_config.px8618_reset_gpio)) {
-		DSI_DEBUG("[%s] platform-px8618-reset-gpio is not set, rc=%d\n",
-				panel->name, rc);
-	}
-	DSI_ERR("zmw---dsi_panel_parse_gpios---px8618_reset_gpio=[%d]\n",panel->reset_config.px8618_reset_gpio);
 	panel->reset_config.lcd_mode_sel_gpio = utils->get_named_gpio(
 		utils->data, mode_set_gpio_name, 0);
 	if (!gpio_is_valid(panel->reset_config.lcd_mode_sel_gpio))

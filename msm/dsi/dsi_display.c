@@ -21,6 +21,11 @@
 #include "dsi_pwr.h"
 #include "sde_dbg.h"
 #include "dsi_parser.h"
+#if defined(CONFIG_PXLW_IRIS)
+#include "iris/dsi_iris6_api.h"
+#include "iris/dsi_iris6_log.h"
+#include <video/mipi_display.h>
+#endif
 
 #define to_dsi_display(x) container_of(x, struct dsi_display, host)
 #define INT_BASE_10 10
@@ -507,7 +512,11 @@ static int dsi_host_alloc_cmd_tx_buffer(struct dsi_display *display)
 	struct dsi_display_ctrl *display_ctrl;
 
 	display->tx_cmd_buf = msm_gem_new(display->drm_dev,
+#if defined(CONFIG_PXLW_IRIS)
+			SZ_256K,
+#else
 			SZ_4K,
+#endif
 			MSM_BO_UNCACHED);
 
 	if ((display->tx_cmd_buf) == NULL) {
@@ -516,7 +525,11 @@ static int dsi_host_alloc_cmd_tx_buffer(struct dsi_display *display)
 		goto error;
 	}
 
+#if defined(CONFIG_PXLW_IRIS)
+	display->cmd_buffer_size = SZ_256K;
+#else
 	display->cmd_buffer_size = SZ_4K;
+#endif
 
 	display->aspace = msm_gem_smmu_address_space_get(
 			display->drm_dev, MSM_SMMU_DOMAIN_UNSECURE);
@@ -556,7 +569,11 @@ static int dsi_host_alloc_cmd_tx_buffer(struct dsi_display *display)
 
 	display_for_each_ctrl(cnt, display) {
 		display_ctrl = &display->ctrl[cnt];
+#if defined(CONFIG_PXLW_IRIS)
+		display_ctrl->ctrl->cmd_buffer_size = SZ_256K;
+#else
 		display_ctrl->ctrl->cmd_buffer_size = SZ_4K;
+#endif
 		display_ctrl->ctrl->cmd_buffer_iova =
 					display->cmd_buffer_iova;
 		display_ctrl->ctrl->vaddr = display->vaddr;
@@ -712,6 +729,11 @@ static int dsi_display_validate_status(struct dsi_display_ctrl *ctrl,
 {
 	int rc = 0;
 
+#if defined(CONFIG_PXLW_IRIS)
+	rc = iris_status_get(ctrl, panel);
+	return rc;
+#endif
+
 	rc = dsi_display_read_status(ctrl, panel);
 	if (rc <= 0) {
 		goto exit;
@@ -798,6 +820,15 @@ static int dsi_display_status_check_te(struct dsi_display *display,
 	int rc = 1, i = 0;
 	int const esd_te_timeout = msecs_to_jiffies(3*20);
 
+#if defined(CONFIG_PXLW_IRIS)
+	struct dsi_display_ctrl *ctrl;
+
+	ctrl = &display->ctrl[display->cmd_master_idx];
+	rc = iris_status_get(ctrl, display->panel);
+	if (rc < 0)
+		return rc;
+#endif
+
 	if (!rechecks)
 		return rc;
 
@@ -873,6 +904,10 @@ int dsi_display_check_status(struct drm_connector *connector, void *display,
 	dsi_display_set_ctrl_esd_check_flag(dsi_display, true);
 	dsi_display_mask_ctrl_error_interrupts(dsi_display, mask, true);
 
+#if defined(CONFIG_PXLW_IRIS)
+	iris_dma_ch1_trigger(false, 0);
+#endif
+
 	if (status_mode == ESD_MODE_REG_READ) {
 		rc = dsi_display_status_reg_read(dsi_display);
 	} else if (status_mode == ESD_MODE_SW_BTA) {
@@ -891,6 +926,11 @@ int dsi_display_check_status(struct drm_connector *connector, void *display,
 	 */
 	if (rc > 0 && te_check_override)
 		rc = dsi_display_status_check_te(dsi_display, te_rechecks);
+
+#if defined(CONFIG_PXLW_IRIS)
+	iris_dma_ch1_trigger(true, 0);
+#endif
+
 	/* Unmask error interrupts if check passed*/
 	if (rc > 0) {
 		dsi_display_set_ctrl_esd_check_flag(dsi_display, false);
@@ -3396,6 +3436,11 @@ static ssize_t dsi_host_transfer(struct mipi_dsi_host *host,
 				(display->enabled))
 			cmd_flags |= DSI_CTRL_CMD_CUSTOM_DMA_SCHED;
 
+#if defined(CONFIG_PXLW_IRIS)
+		if (msg->rx_buf && msg->rx_len)
+			cmd_flags |= DSI_CTRL_CMD_READ;
+#endif
+
 		rc = dsi_ctrl_cmd_transfer(display->ctrl[ctrl_idx].ctrl, msg,
 				&cmd_flags);
 		if (rc < 0) {
@@ -4326,6 +4371,11 @@ static int dsi_display_res_init(struct dsi_display *display)
 		phy->cfg.phy_type =
 			display->panel->host_config.phy_type;
 	}
+
+#if defined(CONFIG_PXLW_IRIS)
+	iris_parse_param(display->panel_node, display->panel);
+	iris_init(display, display->panel);
+#endif
 
 	rc = dsi_display_parse_lane_map(display);
 	if (rc) {
@@ -6125,6 +6175,10 @@ int dsi_display_dev_remove(struct platform_device *pdev)
 	}
 
 	display = platform_get_drvdata(pdev);
+
+#if defined(CONFIG_PXLW_IRIS)
+	iris_deinit();
+#endif
 
 	/* decrement ref count */
 	of_node_put(display->panel_node);
@@ -8035,6 +8089,10 @@ error_panel_post_unprep:
 error:
 	mutex_unlock(&display->display_lock);
 	SDE_EVT32(SDE_EVTLOG_FUNC_EXIT);
+#if defined(CONFIG_PXLW_IRIS)
+	iris_prepare();
+#endif
+
 	return rc;
 }
 
@@ -8332,7 +8390,9 @@ int dsi_display_enable(struct dsi_display *display)
 	if (is_skip_op_required(display)) {
 
 		dsi_display_config_ctrl_for_cont_splash(display);
-
+#if defined(CONFIG_PXLW_IRIS)
+		//iris_send_cont_splash(IRIS_CONT_SPLASH_KERNEL);
+#endif
 		rc = dsi_display_splash_res_cleanup(display);
 		if (rc) {
 			DSI_ERR("Continuous splash res cleanup failed, rc=%d\n",

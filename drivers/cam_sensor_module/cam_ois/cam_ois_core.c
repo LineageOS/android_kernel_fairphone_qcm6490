@@ -14,6 +14,7 @@
 #include "cam_res_mgr_api.h"
 #include "cam_common_util.h"
 #include "cam_packet_util.h"
+extern int dw9784_download_open_camera(struct cam_ois_ctrl_t *o_ctrl);
 
 int32_t cam_ois_construct_default_power_setting(
 	struct cam_sensor_power_ctrl_t *power_info)
@@ -661,8 +662,12 @@ static int cam_ois_pkt_parse(struct cam_ois_ctrl_t *o_ctrl, void *arg)
 			CAM_ERR(CAM_OIS,
 				"Cannot apply Init settings: rc = %d",
 				rc);
-			goto pwr_dwn;
+			//goto pwr_dwn; //temp modify by jinghuang
 		}
+
+                //add by jinghuang
+                CAM_ERR(CAM_OIS, "jinghuang dw9784_download_open_camera");
+                dw9784_download_open_camera(o_ctrl);
 
 		if (o_ctrl->is_ois_calib) {
 			rc = cam_ois_apply_settings(o_ctrl,

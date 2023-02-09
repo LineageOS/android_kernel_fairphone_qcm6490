@@ -18,6 +18,7 @@
 #ifdef DEBUG_API
 #include "dw9784_ois.h"
 #include <linux/delay.h>
+#include "DW9784_T2M_FW_V0201_D0116.h"
 
 //#include "func.h"
 #else
@@ -26,6 +27,8 @@
 //#include <stdio.h>
 //#include <string.h>
 //#include "DW9784_OSOM_FW_V0101_D0602.h"
+#include "DW9784_T2M_FW_V0201_D0116.h"
+
 #include "dw9784_ois.h"
 
 extern unsigned char DW9784_ID;
@@ -61,7 +64,7 @@ void os_mdelay(int count)
 	//HAL_Delay(count);
 	mdelay(count);
 }
-//add by jinghuang for temp
+
 static int write_reg_16bit_value_16bit(struct cam_ois_ctrl_t *o_ctrl,uint32_t addr, uint32_t data){
 	int ret = OIS_ERROR;
 //	int cnt;
@@ -130,7 +133,7 @@ static int read_reg_16bit_value_16bit(struct cam_ois_ctrl_t *o_ctrl,
 		return -EINVAL;
 	}
 	temp_freq = o_ctrl->io_master_info.cci_client->i2c_freq_mode;
-	/* Modify i2c freq to 100K */
+	/* Modify i2c freq to 400K */
 	o_ctrl->io_master_info.cci_client->i2c_freq_mode = I2C_FAST_MODE;
 	ret = camera_io_dev_read(&(o_ctrl->io_master_info), addr, data, CAMERA_SENSOR_I2C_TYPE_WORD, CAMERA_SENSOR_I2C_TYPE_WORD);
 	if (ret < 0)
@@ -139,14 +142,61 @@ static int read_reg_16bit_value_16bit(struct cam_ois_ctrl_t *o_ctrl,
 
 	return ret;
 }
-static int  i2c_block_write_reg( int addr, int *data, int count ){
-return 0;
-}
+#if 0
+static int  i2c_block_write_reg( struct cam_ois_ctrl_t *o_ctrl, uint32_t addr, uint32_t *data, uint32_t count ){
+    uint32_t total_num =0,cnt=0;
+	struct cam_sensor_i2c_reg_setting i2c_reg_setting;
+	enum i2c_freq_mode temp_freq;
+	int ret = OIS_ERROR;
+	if (o_ctrl == NULL ) {
+		CAM_ERR(CAM_OIS,"Invalid Args o_ctrl: %pK", o_ctrl);
+		return -EINVAL;
+	}
+	if (o_ctrl->cam_ois_state < CAM_OIS_CONFIG) {
+		CAM_ERR(CAM_OIS,"Not in right state to start soc writes: %d",
+							o_ctrl->cam_ois_state);
+		return -EINVAL;
+	}
+	temp_freq = o_ctrl->io_master_info.cci_client->i2c_freq_mode;
+	/* Modify i2c freq to 400K */
+	o_ctrl->io_master_info.cci_client->i2c_freq_mode = I2C_FAST_MODE;
+	
+	total_num = count;
+    i2c_reg_setting.addr_type = CAMERA_SENSOR_I2C_TYPE_WORD;
+    i2c_reg_setting.data_type = CAMERA_SENSOR_I2C_TYPE_WORD;
+    i2c_reg_setting.size = total_num;
+    i2c_reg_setting.delay = 0;
+	i2c_reg_setting.reg_setting = (struct cam_sensor_i2c_reg_array *)
+			kzalloc(sizeof(struct cam_sensor_i2c_reg_array) *
+							total_num, GFP_KERNEL);
+	if (i2c_reg_setting.reg_setting == NULL) {
+		CAM_ERR(CAM_OIS,"kzalloc failed");
+		return OIS_ERROR;
+	}
 
-//add by jinghuang for temp
-int tmp_fw[5]={0};
-int *DW9784_FW=tmp_fw;
-//temp modify need delete
+   
+    
+    for (cnt = 0; cnt < total_num;cnt++,data++) {
+    	i2c_reg_setting.reg_setting[cnt].reg_addr =addr;
+    	i2c_reg_setting.reg_setting[cnt].reg_data = *data;
+    	i2c_reg_setting.reg_setting[cnt].delay = 0;
+    	i2c_reg_setting.reg_setting[cnt].data_mask = 0;
+    }
+	 CAM_ERR(CAM_OIS,"jinghuang test:sid=0x%x",o_ctrl->io_master_info.cci_client->sid);
+	 CAM_ERR(CAM_OIS,"jinghuang test:reg_setting[%d].reg_addr=0x%x,reg_data=0x%x",total_num-1,i2c_reg_setting.reg_setting[total_num-1].reg_addr,
+	 	                                                                i2c_reg_setting.reg_setting[total_num-1].reg_data);
+   
+    ret = camera_io_dev_write_continuous(&(o_ctrl->io_master_info),
+    	&i2c_reg_setting, 1);
+
+	if (ret < 0)
+		 CAM_ERR(CAM_OIS,"err! ret:%d", ret);
+	o_ctrl->io_master_info.cci_client->i2c_freq_mode = temp_freq;
+	kfree(i2c_reg_setting.reg_setting);
+	return ret;
+}
+#endif
+
 void GenerateFirmwareContexts(void)
 {
 	g_firmwareContext.version = DW9784_FW_VERSION;
@@ -194,8 +244,7 @@ int dw9784_download_open_camera(struct cam_ois_ctrl_t *o_ctrl)
 		printk("[dw9784_download_open_camera] dw9784 chip_id check failed");
 		printk("[dw9784_download_open_camera] force to recovery firmware");
 	}
-	//add by jinghuang for temp modify
-	return 0;
+
 	if (dw9784_checksum_fw_chk(o_ctrl) == ERROR_FW_CHECKSUM)
 	{
 		g_downloadByForce = 1; 
@@ -270,7 +319,7 @@ int dw9784_download_open_camera(struct cam_ois_ctrl_t *o_ctrl)
 	return ret;
 }
 
-unsigned int buf_temp[10240];
+//unsigned int buf_temp[10240];
 int dw9784_download_fw(struct cam_ois_ctrl_t *o_ctrl,int module_state)
 {
 	//unsigned char ret = ERROR_FW_VERIFY;
@@ -278,7 +327,7 @@ int dw9784_download_fw(struct cam_ois_ctrl_t *o_ctrl,int module_state)
 	unsigned int addr;
 	unsigned int FMC;
 	//unsigned int buf[g_firmwareContext.size];
-	memset(buf_temp, 0, MCS_SIZE_W * sizeof(unsigned int));
+	//memset(buf_temp, 0, MCS_SIZE_W * sizeof(unsigned int));
 	/* step 1: MTP Erase and DSP Disable for firmware 0x8000 write */
 	write_reg_16bit_value_16bit(o_ctrl,0xd001, 0x0000);
 	
@@ -316,10 +365,17 @@ int dw9784_download_fw(struct cam_ois_ctrl_t *o_ctrl,int module_state)
 	/* step 6. firmware sequential write to flash */
 	/* updates the module status before firmware download */
 	*(g_firmwareContext.fwContentPtr + MCS_SIZE_W -1) = module_state;
-	for (i = 0; i < MCS_SIZE_W; i += DATPKT_SIZE)
+	/*write 1block(256*2bytes)/once*/
+	/*for (i = 0; i < MCS_SIZE_W; i += DATPKT_SIZE)
 	{
 		addr = MCS_START_ADDRESS + i;
-		i2c_block_write_reg( addr, g_firmwareContext.fwContentPtr + i, DATPKT_SIZE );
+		i2c_block_write_reg(o_ctrl, addr, g_firmwareContext.fwContentPtr + i, DATPKT_SIZE );
+	}*/
+	/*write 2Bytes/once*/
+	for (i = 0; i < MCS_SIZE_W; i++)
+	{
+		addr = MCS_START_ADDRESS + i;
+		write_reg_16bit_value_16bit(o_ctrl,addr, *(g_firmwareContext.fwContentPtr + i));
 	}
 		
 #if 0
@@ -370,10 +426,18 @@ int dw9784_download_fw(struct cam_ois_ctrl_t *o_ctrl,int module_state)
 	
 	printk("[dw9784_download_fw] start firmware/pid download");
 	/* step 8. firmware sequential write to flash */
-	for (i = 0; i < PID_SIZE_W; i += DATPKT_SIZE)
+	/*write 1block(256*2bytes)/once*/
+/*	for (i = 0; i < PID_SIZE_W; i += DATPKT_SIZE)
 	{
 		addr = IF_START_ADDRESS + i;
-		i2c_block_write_reg( addr, g_firmwareContext.fwContentPtr + MCS_SIZE_W + i, DATPKT_SIZE );
+		i2c_block_write_reg(o_ctrl, addr, g_firmwareContext.fwContentPtr + MCS_SIZE_W + i, DATPKT_SIZE );
+	}
+	*/
+	/*write 2Bytes/once*/
+	for (i = 0; i < PID_SIZE_W; i++)
+	{
+		addr = IF_START_ADDRESS + i;
+		write_reg_16bit_value_16bit(o_ctrl,addr, *(g_firmwareContext.fwContentPtr + MCS_SIZE_W + i));
 	}
 	printk("[dw9784_download_fw] write firmware/pid to flash");
 	
@@ -476,12 +540,18 @@ unsigned int dw9784_fw_ver_chk(struct cam_ois_ctrl_t *o_ctrl)
 {
 	unsigned int fw_ver;
 	unsigned int fw_date;
-	
+	//unsigned int fw_ver_tmp;
 	read_reg_16bit_value_16bit(o_ctrl,0x7001, &fw_ver);
 	read_reg_16bit_value_16bit(o_ctrl,0x7002, &fw_date);
 	
 	printk("[dw9784_chip_id] fw version : 0x%04X", fw_ver);
 	printk("[dw9784_chip_id] fw date : 0x%04X", fw_date);
+
+	//write_reg_16bit_value_16bit(o_ctrl,0x7001, 0x0201);
+	//mdelay(2);
+	//read_reg_16bit_value_16bit(o_ctrl,0x7001, &fw_ver_tmp);
+	//printk("[dw9784_chip_id] test write and read fw version : 0x%04X", fw_ver_tmp);
+	
 	
 	return fw_ver;
 }
@@ -779,7 +849,7 @@ int dw9784_checksum_fw_chk(struct cam_ois_ctrl_t *o_ctrl)
 	printk("[dw9784_checksum_fw_chk] reg_checksum_status : 0x%04X", reg_checksum_status);
 	printk("[dw9784_checksum_fw_chk] ref_fw_checksum : 0x%04X, reg_fw_checksum : 0x%04X", DW9784_FW_CHECKSUM, reg_fw_checksum);
 
-	if( (reg_checksum_status & 0x0001) == 0)
+	if((reg_checksum_status&0x0001)  == 0)
 	{
 		printk("[dw9784_checksum_fw_chk] fw checksum pass");
 		return EOK;

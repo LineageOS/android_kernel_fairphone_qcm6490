@@ -12,7 +12,10 @@ struct sk_buff;
 
 #define QRTR_DEL_PROC_MAGIC	0xe111
 
+
+/*[Begin] by T2M zhiming.weng 20230210 for [CTSV13.0R2]SENSOR->Device Suspend Tests fail [X1-1317] */
 #define MAX_NON_WAKE_SVC_LEN    5
+/*[End] by T2M zhiming.weng*/
 
 /**
  * struct qrtr_endpoint - endpoint handle
@@ -29,8 +32,7 @@ struct qrtr_endpoint {
 };
 
 int qrtr_endpoint_register(struct qrtr_endpoint *ep, unsigned int net_id,
-			   bool rt, u32 *svc_arr);
-
+			   bool rt, u32 *svc_arr); /* Modify by T2M zhiming.weng 20230210 for [CTSV13.0R2]SENSOR->Device Suspend Tests fail [X1-1317] */
 void qrtr_endpoint_unregister(struct qrtr_endpoint *ep);
 
 int qrtr_endpoint_post(struct qrtr_endpoint *ep, const void *data, size_t len);

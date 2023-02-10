@@ -192,7 +192,9 @@ struct qrtr_node {
 	struct wakeup_source *ws;
 	void *ilc;
 
+/*[Begin] by T2M zhiming.weng 20230210 for [CTSV13.0R2]SENSOR->Device Suspend Tests fail [X1-1317] */
 	u32 nonwake_svc[MAX_NON_WAKE_SVC_LEN];
+/*[End] by T2M zhiming.weng*/
 };
 
 struct qrtr_tx_flow_waiter {
@@ -841,9 +843,11 @@ int qrtr_endpoint_post(struct qrtr_endpoint *ep, const void *data, size_t len)
 	size_t size;
 	unsigned int ver;
 	size_t hdrlen;
+/*[Begin] by T2M zhiming.weng 20230210 for [CTSV13.0R2]SENSOR->Device Suspend Tests fail [X1-1317] */
 	int errcode, i;
 	bool wake = true;
 	int svc_id;
+/*[End] by T2M zhiming.weng*/
 
 	if (len == 0 || len & 3)
 		return -EINVAL;
@@ -943,6 +947,9 @@ int qrtr_endpoint_post(struct qrtr_endpoint *ep, const void *data, size_t len)
 			goto err;
 
 		/* Force wakeup for all packets except for sensors */
+/*[Begin] by T2M zhiming.weng 20230210 for [CTSV13.0R2]SENSOR->Device Suspend Tests fail [X1-1317] */
+		//if (node->nid != 9)
+		//	pm_wakeup_ws_event(node->ws, qrtr_wakeup_ms, true);
 		if (node->nid != 9 && node->nid != 5)
 			pm_wakeup_ws_event(node->ws, qrtr_wakeup_ms, true);
 
@@ -959,6 +966,7 @@ int qrtr_endpoint_post(struct qrtr_endpoint *ep, const void *data, size_t len)
 			if (wake)
 				pm_wakeup_ws_event(node->ws, qrtr_wakeup_ms, true);
 		}
+/*[End] by T2M zhiming.weng*/
 		qrtr_port_put(ipc);
 	}
 
@@ -1167,7 +1175,7 @@ static void qrtr_hello_work(struct kthread_work *work)
  * The specified endpoint must have the xmit function pointer set on call.
  */
 int qrtr_endpoint_register(struct qrtr_endpoint *ep, unsigned int net_id,
-			   bool rt, u32 *svc_arr)
+			   bool rt, u32 *svc_arr) /* Modify by T2M zhiming.weng 20230210 for [CTSV13.0R2]SENSOR->Device Suspend Tests fail [X1-1317] */
 {
 	struct qrtr_node *node;
 	struct sched_param param = {.sched_priority = 1};
@@ -1198,8 +1206,10 @@ int qrtr_endpoint_register(struct qrtr_endpoint *ep, unsigned int net_id,
 	if (rt)
 		sched_setscheduler(node->task, SCHED_FIFO, &param);
 
+/*[Begin] by T2M zhiming.weng 20230210 for [CTSV13.0R2]SENSOR->Device Suspend Tests fail [X1-1317] */
 	if (svc_arr)
 		memcpy(node->nonwake_svc, svc_arr, MAX_NON_WAKE_SVC_LEN * sizeof(int));
+/*[End] by T2M zhiming.weng*/
 
 	mutex_init(&node->qrtr_tx_lock);
 	INIT_RADIX_TREE(&node->qrtr_tx_flow, GFP_KERNEL);

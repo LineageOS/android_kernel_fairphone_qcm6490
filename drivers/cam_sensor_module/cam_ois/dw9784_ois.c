@@ -83,7 +83,8 @@ static int write_reg_16bit_value_16bit(struct cam_ois_ctrl_t *o_ctrl,uint32_t ad
 		return -EINVAL;
 	}
 	temp_freq = o_ctrl->io_master_info.cci_client->i2c_freq_mode;
-	o_ctrl->io_master_info.cci_client->i2c_freq_mode = I2C_FAST_MODE;//I2C_FAST_PLUS_MODE;
+    /*Modify i2c freq to 1M*/
+	o_ctrl->io_master_info.cci_client->i2c_freq_mode = I2C_FAST_PLUS_MODE;//I2C_FAST_PLUS_MODE;
 	i2c_reg_setting.addr_type = CAMERA_SENSOR_I2C_TYPE_WORD;
 	i2c_reg_setting.data_type = CAMERA_SENSOR_I2C_TYPE_WORD;
 	i2c_reg_setting.size = num_byte;
@@ -99,15 +100,7 @@ static int write_reg_16bit_value_16bit(struct cam_ois_ctrl_t *o_ctrl,uint32_t ad
 	i2c_reg_setting.reg_setting[0].reg_data = data;
 	i2c_reg_setting.reg_setting[0].delay = 0;
 	i2c_reg_setting.reg_setting[0].data_mask = 0;
-	/*
-	for (cnt = 1; cnt < num_byte; cnt++) {
-		i2c_reg_setting.reg_setting[cnt].reg_addr = 0;
-		i2c_reg_setting.reg_setting[cnt].reg_data = data[cnt];
-		i2c_reg_setting.reg_setting[cnt].delay = 0;
-		i2c_reg_setting.reg_setting[cnt].data_mask = 0;
-	}*/
-	//ret = camera_io_dev_write_continuous(&(o_ctrl->io_master_info),
-	//				   &i2c_reg_setting, 0);
+
 	ret = camera_io_dev_write(&(o_ctrl->io_master_info),	&i2c_reg_setting);
 	if (ret < 0)
 		 CAM_ERR(CAM_OIS,"err! ret:%d", ret);
@@ -133,8 +126,8 @@ static int read_reg_16bit_value_16bit(struct cam_ois_ctrl_t *o_ctrl,
 		return -EINVAL;
 	}
 	temp_freq = o_ctrl->io_master_info.cci_client->i2c_freq_mode;
-	/* Modify i2c freq to 400K */
-	o_ctrl->io_master_info.cci_client->i2c_freq_mode = I2C_FAST_MODE;
+	/* Modify i2c freq to 1M */
+	o_ctrl->io_master_info.cci_client->i2c_freq_mode = I2C_FAST_PLUS_MODE;
 	ret = camera_io_dev_read(&(o_ctrl->io_master_info), addr, data, CAMERA_SENSOR_I2C_TYPE_WORD, CAMERA_SENSOR_I2C_TYPE_WORD);
 	if (ret < 0)
 		CAM_ERR(CAM_OIS,"err! ret:%d", ret);
@@ -142,7 +135,6 @@ static int read_reg_16bit_value_16bit(struct cam_ois_ctrl_t *o_ctrl,
 
 	return ret;
 }
-#if 0
 static int  i2c_block_write_reg( struct cam_ois_ctrl_t *o_ctrl, uint32_t addr, uint32_t *data, uint32_t count ){
     uint32_t total_num =0,cnt=0;
 	struct cam_sensor_i2c_reg_setting i2c_reg_setting;
@@ -158,36 +150,31 @@ static int  i2c_block_write_reg( struct cam_ois_ctrl_t *o_ctrl, uint32_t addr, u
 		return -EINVAL;
 	}
 	temp_freq = o_ctrl->io_master_info.cci_client->i2c_freq_mode;
-	/* Modify i2c freq to 400K */
-	o_ctrl->io_master_info.cci_client->i2c_freq_mode = I2C_FAST_MODE;
+	/* Modify i2c freq to 1M */
+	o_ctrl->io_master_info.cci_client->i2c_freq_mode = I2C_FAST_PLUS_MODE;
 	
 	total_num = count;
     i2c_reg_setting.addr_type = CAMERA_SENSOR_I2C_TYPE_WORD;
     i2c_reg_setting.data_type = CAMERA_SENSOR_I2C_TYPE_WORD;
     i2c_reg_setting.size = total_num;
     i2c_reg_setting.delay = 0;
-	i2c_reg_setting.reg_setting = (struct cam_sensor_i2c_reg_array *)
-			kzalloc(sizeof(struct cam_sensor_i2c_reg_array) *
-							total_num, GFP_KERNEL);
-	if (i2c_reg_setting.reg_setting == NULL) {
-		CAM_ERR(CAM_OIS,"kzalloc failed");
-		return OIS_ERROR;
-	}
+    i2c_reg_setting.reg_setting = (struct cam_sensor_i2c_reg_array *)
+                            kzalloc(sizeof(struct cam_sensor_i2c_reg_array) *
+                            total_num, GFP_KERNEL);
+    if (i2c_reg_setting.reg_setting == NULL) {
+        CAM_ERR(CAM_OIS,"kzalloc failed");
+        return OIS_ERROR;
+    }
 
-   
-    
     for (cnt = 0; cnt < total_num;cnt++,data++) {
     	i2c_reg_setting.reg_setting[cnt].reg_addr =addr;
     	i2c_reg_setting.reg_setting[cnt].reg_data = *data;
     	i2c_reg_setting.reg_setting[cnt].delay = 0;
     	i2c_reg_setting.reg_setting[cnt].data_mask = 0;
     }
-	 CAM_ERR(CAM_OIS,"jinghuang test:sid=0x%x",o_ctrl->io_master_info.cci_client->sid);
-	 CAM_ERR(CAM_OIS,"jinghuang test:reg_setting[%d].reg_addr=0x%x,reg_data=0x%x",total_num-1,i2c_reg_setting.reg_setting[total_num-1].reg_addr,
-	 	                                                                i2c_reg_setting.reg_setting[total_num-1].reg_data);
-   
-    ret = camera_io_dev_write_continuous(&(o_ctrl->io_master_info),
-    	&i2c_reg_setting, 1);
+
+   /*0:use SEQ mode for i2c continuous write 1:use BURST mode for i2c continuous write*/
+    ret = camera_io_dev_write_continuous(&(o_ctrl->io_master_info),&i2c_reg_setting, 0);
 
 	if (ret < 0)
 		 CAM_ERR(CAM_OIS,"err! ret:%d", ret);
@@ -195,7 +182,6 @@ static int  i2c_block_write_reg( struct cam_ois_ctrl_t *o_ctrl, uint32_t addr, u
 	kfree(i2c_reg_setting.reg_setting);
 	return ret;
 }
-#endif
 
 void GenerateFirmwareContexts(void)
 {
@@ -217,10 +203,10 @@ int dw9784_download_open_camera(struct cam_ois_ctrl_t *o_ctrl)
   //unsigned int fw_type = 0;
 	//unsigned char eis_type = 0;
 	//unsigned char fw_kind = 0;
-	unsigned int pre_module_state = 0; /* 0x0000: normal, 0xFFFF: abnormal */
-	int store_flag = 0;
-	printk("[dw9784_download_open_camera] enter");
-	GenerateFirmwareContexts();
+    unsigned int pre_module_state = 0; /* 0x0000: normal, 0xFFFF: abnormal */
+    //int store_flag = 0;
+    printk("[dw9784_download_open_camera] enter");
+    GenerateFirmwareContexts();
 
 	err_whoami = dw9784_whoami_chk(o_ctrl);
 	if (err_whoami == ERROR_SECOND_ID)
@@ -308,14 +294,19 @@ int dw9784_download_open_camera(struct cam_ois_ctrl_t *o_ctrl)
 			}
 		}	
 	}
-	store_flag += dw9784_set_gyro_select(o_ctrl,5); /* ICM_42631 */
-	store_flag += dw9784_gyro_direction_setting(o_ctrl,GYRO_FRONT_LAYOUT, GYRO_DEGREE_0);
+/*use ST_LSM6DSOQ for fp5*/
+/*jinghuang:no need config for fp5,alread config in fw*/
+#if 0
+	store_flag += dw9784_set_gyro_select(o_ctrl,4); /* ST_LSM6DSOQ */
+	store_flag += dw9784_gyro_direction_setting(o_ctrl,GYRO_BACK_LAYOUT, GYRO_DEGREE_0);
 	
 	if (store_flag)
 	{
 		ret = dw9784_set_cal_store(o_ctrl);
 	}
-	
+#endif
+/*no need config for fp5*/
+
 	return ret;
 }
 
@@ -366,17 +357,17 @@ int dw9784_download_fw(struct cam_ois_ctrl_t *o_ctrl,int module_state)
 	/* updates the module status before firmware download */
 	*(g_firmwareContext.fwContentPtr + MCS_SIZE_W -1) = module_state;
 	/*write 1block(256*2bytes)/once*/
-	/*for (i = 0; i < MCS_SIZE_W; i += DATPKT_SIZE)
+	for (i = 0; i < MCS_SIZE_W; i += DATPKT_SIZE)
 	{
 		addr = MCS_START_ADDRESS + i;
 		i2c_block_write_reg(o_ctrl, addr, g_firmwareContext.fwContentPtr + i, DATPKT_SIZE );
-	}*/
+	}
 	/*write 2Bytes/once*/
-	for (i = 0; i < MCS_SIZE_W; i++)
+	/*for (i = 0; i < MCS_SIZE_W; i++)
 	{
 		addr = MCS_START_ADDRESS + i;
 		write_reg_16bit_value_16bit(o_ctrl,addr, *(g_firmwareContext.fwContentPtr + i));
-	}
+	}*/
 		
 #if 0
 	/* Check by reading fw flash directly to i2c */
@@ -427,18 +418,18 @@ int dw9784_download_fw(struct cam_ois_ctrl_t *o_ctrl,int module_state)
 	printk("[dw9784_download_fw] start firmware/pid download");
 	/* step 8. firmware sequential write to flash */
 	/*write 1block(256*2bytes)/once*/
-/*	for (i = 0; i < PID_SIZE_W; i += DATPKT_SIZE)
+	for (i = 0; i < PID_SIZE_W; i += DATPKT_SIZE)
 	{
 		addr = IF_START_ADDRESS + i;
 		i2c_block_write_reg(o_ctrl, addr, g_firmwareContext.fwContentPtr + MCS_SIZE_W + i, DATPKT_SIZE );
 	}
-	*/
+
 	/*write 2Bytes/once*/
-	for (i = 0; i < PID_SIZE_W; i++)
+/*	for (i = 0; i < PID_SIZE_W; i++)
 	{
 		addr = IF_START_ADDRESS + i;
 		write_reg_16bit_value_16bit(o_ctrl,addr, *(g_firmwareContext.fwContentPtr + MCS_SIZE_W + i));
-	}
+	}*/
 	printk("[dw9784_download_fw] write firmware/pid to flash");
 	
 #if 0

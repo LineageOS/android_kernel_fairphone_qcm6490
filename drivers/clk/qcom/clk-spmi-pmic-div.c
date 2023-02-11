@@ -210,6 +210,7 @@ static int spmi_pmic_clkdiv_probe(struct platform_device *pdev)
 	u32 start;
 
 	ret = of_property_read_u32(of_node, "reg", &start);
+pr_err("zmw---reg=[%X], node:%s, node.parent:%s", start, of_node->name, of_node->parent->name);
 	if (ret < 0) {
 		dev_err(dev, "reg property reading failed\n");
 		return ret;

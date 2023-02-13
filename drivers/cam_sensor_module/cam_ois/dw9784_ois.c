@@ -1228,7 +1228,46 @@ void dw9784_ois_initial_setting(struct cam_ois_ctrl_t *o_ctrl)
 	write_reg_16bit_value_16bit(o_ctrl,0x7019, 0x8000); /* enable tripod mode */
 	write_reg_16bit_value_16bit(o_ctrl,0x701A, 0x8000); /* enable dd func. */
 }
+/*****************add beging for  mmi test funcion*****************
+******************************************************************/
+/*store gyro gain for cal*/
+int dw9784_module_cal_store(struct cam_ois_ctrl_t *o_ctrl)
+{
+    /*
+    Error code definition
+    0 : No Error
+    -1 : FUNC_FAIL
+    */
+    printk("[dw9784_module_cal_store] start");
+    write_reg_16bit_value_16bit(o_ctrl,0x7012, 0x000A); //Set store mode
 
+    //When store is done, status changes to 0xA000
+    if(dw9784_wait_check_register(o_ctrl,0x7010, 0xA000) == FUNC_PASS) {
+        printk("[dw9784_module_cal_store] successful entry into store mode");
+    }
+    else {
+        printk("[dw9784_module_cal_store] failed to enter store mode");
+    return FUNC_FAIL;
+    }
+    dw9784_code_pt_off(o_ctrl); /* code protection off */
+    write_reg_16bit_value_16bit(o_ctrl,0x700F, 0xA6A6); //Module protect code
+    os_mdelay(1);
+    write_reg_16bit_value_16bit(o_ctrl,0x7011, 0x0001); //Execute store
+    os_mdelay(40);
+    //When store is done, status changes to 0xA001
+    if(dw9784_wait_check_register(o_ctrl,0x7010, 0xA001) == FUNC_PASS) {
+        dw9784_ois_reset(o_ctrl);
+        printk("[dw9784_module_cal_store] finish");
+    }
+    else {
+        printk("[dw9784_module_cal_store] store function fail");
+        return FUNC_FAIL;
+    }
+    return FUNC_PASS;
+}
+
+
+/*add end for  mmi test funcion*/
 
 void hall_sensitivity_cal_example(struct cam_ois_ctrl_t *o_ctrl)
 {

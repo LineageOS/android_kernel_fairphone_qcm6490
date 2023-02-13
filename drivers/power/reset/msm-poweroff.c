@@ -57,7 +57,14 @@ static struct nvmem_cell *nvmem_cell;
  * There is no API from TZ to re-enable the registers.
  * So the SDI cannot be re-enabled when it already by-passed.
  */
+//+ FP5-281. Disable ramdump on mini releases. liquan.zhou.t2m. 20230213.
+#ifdef T2M_DISABLE_RAMDUMP
+static int download_mode = 0;
+#else
 static int download_mode = 1;
+#endif
+//- FP5-281. Disable ramdump on mini releases. liquan.zhou.t2m. 20230213.
+
 static struct kobject dload_kobj;
 
 static int in_panic;

@@ -1795,7 +1795,9 @@ int iris_parse_param(struct device_node *np, struct dsi_panel *panel)
 
 	pcfg->dsirecover_check_method = CHECK_WRITE_AND_READ; //CHECK_WRITE_AND_READ;
 	pcfg->dsirecover_check_path = PATH_I2C; //PATH_I2C;
-	pcfg->pq_update_is_dsi_hs = 0; //1;
+	pcfg->pq_update_is_dsi_hs =
+		(panel->panel_mode == DSI_OP_CMD_MODE)? 1: 0;
+	IRIS_LOGI("%s(), pq_update_dsi_hs %i", __func__, pcfg->pq_update_is_dsi_hs);
 
 	rc = _iris_parse_color_temp_range(lightup_node, pcfg);
 	if (rc) {

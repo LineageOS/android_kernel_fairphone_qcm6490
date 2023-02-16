@@ -132,6 +132,14 @@ static int dsi_panel_gpio_request(struct dsi_panel *panel)
 		}
 	}
 
+	if (gpio_is_valid(r_config->disp_1v2_off_gpio)) {
+		rc = gpio_request(r_config->disp_1v2_off_gpio, "disp_1v2_off_gpio");
+		if (rc) {
+			DSI_ERR("request for disp_1v2_off_gpio failed, rc=%d\n", rc);
+			goto error_release_reset;
+		}
+	}	
+
 	if (gpio_is_valid(panel->bl_config.en_gpio)) {
 		rc = gpio_request(panel->bl_config.en_gpio, "bklt_en_gpio");
 		if (rc) {
@@ -169,6 +177,8 @@ error_release_mode_sel:
 error_release_disp_en:
 	if (gpio_is_valid(r_config->disp_en_gpio))
 		gpio_free(r_config->disp_en_gpio);
+	if (gpio_is_valid(r_config->disp_1v2_off_gpio))
+		gpio_free(r_config->disp_1v2_off_gpio);		
 error_release_reset:
 	if (gpio_is_valid(r_config->reset_gpio))
 		gpio_free(r_config->reset_gpio);
@@ -186,6 +196,9 @@ static int dsi_panel_gpio_release(struct dsi_panel *panel)
 
 	if (gpio_is_valid(r_config->disp_en_gpio))
 		gpio_free(r_config->disp_en_gpio);
+
+	if (gpio_is_valid(r_config->disp_1v2_off_gpio))
+		gpio_free(r_config->disp_1v2_off_gpio);
 
 	if (gpio_is_valid(panel->bl_config.en_gpio))
 		gpio_free(panel->bl_config.en_gpio);
@@ -255,6 +268,13 @@ static int dsi_panel_reset(struct dsi_panel *panel)
 
 	if (gpio_is_valid(panel->reset_config.disp_en_gpio)) {
 		rc = gpio_direction_output(panel->reset_config.disp_en_gpio, 1);
+		if (rc) {
+			DSI_ERR("unable to set dir for disp gpio rc=%d\n", rc);
+			goto exit;
+		}
+	}
+	if (gpio_is_valid(panel->reset_config.disp_1v2_off_gpio)) {
+		rc = gpio_direction_output(panel->reset_config.disp_1v2_off_gpio, 1);
 		if (rc) {
 			DSI_ERR("unable to set dir for disp gpio rc=%d\n", rc);
 			goto exit;
@@ -385,6 +405,9 @@ error_disable_gpio:
 	if (gpio_is_valid(panel->reset_config.disp_en_gpio))
 		gpio_set_value(panel->reset_config.disp_en_gpio, 0);
 
+	if (gpio_is_valid(panel->reset_config.disp_1v2_off_gpio))
+		gpio_set_value(panel->reset_config.disp_1v2_off_gpio, 0);
+
 	if (gpio_is_valid(panel->bl_config.en_gpio))
 		gpio_set_value(panel->bl_config.en_gpio, 0);
 
@@ -407,6 +430,9 @@ static int dsi_panel_power_off(struct dsi_panel *panel)
 	}
 	if (gpio_is_valid(panel->reset_config.disp_en_gpio))
 		gpio_set_value(panel->reset_config.disp_en_gpio, 0);
+
+	if (gpio_is_valid(panel->reset_config.disp_1v2_off_gpio))
+		gpio_set_value(panel->reset_config.disp_1v2_off_gpio, 0);	
 
 	if (gpio_is_valid(panel->reset_config.reset_gpio) &&
 					!panel->reset_gpio_always_on)
@@ -2292,6 +2318,14 @@ static int dsi_panel_parse_gpios(struct dsi_panel *panel)
 			DSI_DEBUG("[%s] platform-en-gpio is not set, rc=%d\n",
 				 panel->name, rc);
 		}
+	}
+
+	panel->reset_config.disp_1v2_off_gpio =
+			utils->get_named_gpio(utils->data,
+				"qcom,platform-dvdd-off-gpio", 0);
+	if (!gpio_is_valid(panel->reset_config.disp_1v2_off_gpio)) {
+		DSI_DEBUG("[%s] platform-1v2-off-gpio is not set, rc=%d\n",
+				panel->name, rc);
 	}
 
 	panel->reset_config.lcd_mode_sel_gpio = utils->get_named_gpio(

@@ -523,7 +523,7 @@ struct goodix_ts_core {
 	struct notifier_block ts_notifier;
 	struct goodix_ts_esd ts_esd;
 
-#if IS_ENABLED(CONFIG_FB)
+#if (IS_ENABLED(CONFIG_FB) || IS_ENABLED(CONFIG_DRM))
 	struct notifier_block fb_notifier;
 #endif
 };

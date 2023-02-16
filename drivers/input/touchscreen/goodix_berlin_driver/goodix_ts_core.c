@@ -32,6 +32,67 @@
 #define GOODIX_DEFAULT_CFG_NAME		"goodix_cfg_group.cfg"
 #define GOOIDX_INPUT_PHYS			"goodix_ts/input0"
 
+#if IS_ENABLED(CONFIG_DRM)
+#include <drm/drm_panel.h>
+struct drm_panel *gdix_active_panel;
+
+int check_dt(struct device_node *np)
+{
+	int i;
+	int count;
+	struct device_node *node;
+	struct drm_panel *panel;
+	
+	count = of_count_phandle_with_args(np, "panel", NULL);
+	if (count <= 0)
+		return 0;
+	
+	for (i = 0; i < count; i++) {
+		node = of_parse_phandle(np, "panel", i);
+		panel = of_drm_find_panel(node);
+		of_node_put(node);
+		if (!IS_ERR(panel)) {
+			gdix_active_panel = panel;
+			ts_err("%s:check_dt success\n",__func__);			
+			return 0;
+		}
+	}
+
+	return -ENODEV;
+}
+
+int check_default_tp(struct device_node *dt, const char *prop)
+{
+	const char *active_tp;
+	const char *compatible;
+	char *start;
+	int ret;
+
+	ret = of_property_read_string(dt->parent, prop, &active_tp);
+	if (ret) {
+		pr_err(" %s:fail to read %s %d\n", __func__, prop, ret);
+		return -ENODEV;
+	}
+
+	ret = of_property_read_string(dt, "compatible", &compatible);
+	if (ret < 0) {
+		pr_err(" %s:fail to read %s %d\n", __func__, "compatible", ret);
+		return -ENODEV;
+	}
+
+	start = strnstr(active_tp, compatible, strlen(active_tp));
+	if (start == NULL) {
+		pr_err(" %s:no match compatible, %s, %s\n",
+			__func__, compatible, active_tp);
+		ret = -ENODEV;
+	}
+
+	ts_err("%s:check_default_tp success!\n",__func__);
+
+	return ret;
+}
+#endif
+
 struct goodix_module goodix_modules;
 int core_module_prob_sate = CORE_MODULE_UNPROBED;
 
@@ -1668,14 +1729,19 @@ static int goodix_esd_notifier_callback(struct notifier_block *nb,
 			struct goodix_ts_esd, esd_notifier);
 
 	switch (action) {
-	case NOTIFY_FWUPDATE_START:
 	case NOTIFY_SUSPEND:
+		goodix_ts_power_off(ts_esd->ts_core);
+		break;	
+	case NOTIFY_FWUPDATE_START:
 	case NOTIFY_ESD_OFF:
 		goodix_ts_esd_off(ts_esd->ts_core);
 		break;
+
+	case NOTIFY_RESUME:
+		goodix_ts_power_on(ts_esd->ts_core);
+		break;		
 	case NOTIFY_FWUPDATE_FAILED:
 	case NOTIFY_FWUPDATE_SUCCESS:
-	case NOTIFY_RESUME:
 	case NOTIFY_ESD_ON:
 		goodix_ts_esd_on(ts_esd->ts_core);
 		break;
@@ -1745,7 +1811,7 @@ static int goodix_ts_suspend(struct goodix_ts_core *core_data)
 			atomic_read(&core_data->suspended))
 		return 0;
 
-	ts_info("Suspend start");
+	ts_err("Suspend start");
 	atomic_set(&core_data->suspended, 1);
 	/* disable irq */
 	hw_ops->irq_enable(core_data, false);
@@ -1822,7 +1888,7 @@ static int goodix_ts_resume(struct goodix_ts_core *core_data)
 			!atomic_read(&core_data->suspended))
 		return 0;
 
-	ts_info("Resume start");
+	ts_err("Resume start");
 	atomic_set(&core_data->suspended, 0);
 	hw_ops->irq_enable(core_data, false);
 
@@ -1906,8 +1972,57 @@ int goodix_ts_fb_notifier_callback(struct notifier_block *self,
 }
 #endif
 
+#if IS_ENABLED(CONFIG_DRM)
+int goodix_ts_drm_notifier_callback(struct notifier_block *self,
+        unsigned long event, void *data)
+{
+    struct drm_panel_notifier *evdata = data;
+    int *blank = NULL;
+	struct goodix_ts_core *core_data =
+		container_of(self, struct goodix_ts_core, fb_notifier);
+
+    ts_info("in\n");
+
+    if (!evdata)
+        return 0;
+
+    if (!(event == DRM_PANEL_EARLY_EVENT_BLANK ||
+        event == DRM_PANEL_EVENT_BLANK)) {
+        ts_info("event(%lu) do not need process\n", event);
+        return 0;
+    }
+
+    blank = evdata->data;
+    ts_info("FB event:%lu,blank:%d", event, *blank);
+    switch (*blank) {
+    case DRM_PANEL_BLANK_UNBLANK:
+        if (event == DRM_PANEL_EARLY_EVENT_BLANK) {
+            ts_info("resume: event = %lu, not care\n", event);
+        } else if (event == DRM_PANEL_EVENT_BLANK) {
+            goodix_ts_resume(core_data);
+        }
+        break;
+
+    case DRM_PANEL_BLANK_POWERDOWN:
+        if (event == DRM_PANEL_EARLY_EVENT_BLANK) {
+           goodix_ts_suspend(core_data);
+        } else if (event == DRM_PANEL_EVENT_BLANK) {
+            ts_info("suspend: event = %lu, not care\n", event);
+        }
+        break;
+
+    default:
+        ts_err("FB BLANK(%d) do not need process\n", *blank);
+        break;
+    }
+
+    return 0;
+
+}
+#endif
+
 #if IS_ENABLED(CONFIG_PM)
-#if !IS_ENABLED(CONFIG_FB) && !IS_ENABLED(CONFIG_HAS_EARLYSUSPEND)
+#if !IS_ENABLED(CONFIG_FB)&& !IS_ENABLED(CONFIG_DRM)&& !IS_ENABLED(CONFIG_HAS_EARLYSUSPEND) 
 /**
  * goodix_ts_pm_suspend - PM suspend function
  * Called by kernel during system suspend phrase
@@ -1994,6 +2109,17 @@ int goodix_ts_stage2_init(struct goodix_ts_core *cd)
 	cd->fb_notifier.notifier_call = goodix_ts_fb_notifier_callback;
 	if (fb_register_client(&cd->fb_notifier))
 		ts_err("Failed to register fb notifier client:%d", ret);
+#elif IS_ENABLED(CONFIG_DRM)	
+	cd->fb_notifier.notifier_call = goodix_ts_drm_notifier_callback;
+	if (gdix_active_panel) {	
+		ret = drm_panel_notifier_register(gdix_active_panel,
+			&cd->fb_notifier);
+		if (ret)
+			ts_err("Failed to register fb notifier client");
+	}
+	else {
+		ts_err("gdix_active_panel error\n");
+	}		
 #endif
 	/* create sysfs files */
 	goodix_ts_sysfs_init(cd);
@@ -2193,6 +2319,15 @@ static int goodix_ts_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
+	if (check_dt(bus_interface->dev->of_node)) {
+		if (!check_default_tp(bus_interface->dev->of_node, "qcom,spi-touch-active"))
+			ret = -EPROBE_DEFER;
+		else
+			ret = -ENODEV;
+        	ts_err("check_dt failed, error=%d", ret);
+		return ret;
+	}
+
 	core_data->hw_ops = goodix_get_hw_ops();
 	if (!core_data->hw_ops) {
 		ts_err("hw ops is NULL");
@@ -2256,6 +2391,7 @@ static int goodix_ts_remove(struct platform_device *pdev)
 	struct goodix_ts_core *core_data = platform_get_drvdata(pdev);
 	struct goodix_ts_hw_ops *hw_ops = core_data->hw_ops;
 	struct goodix_ts_esd *ts_esd = &core_data->ts_esd;
+	int ret = 0;
 
 	goodix_ts_unregister_notifier(&core_data->ts_notifier);
 	goodix_tools_exit();
@@ -2266,6 +2402,13 @@ static int goodix_ts_remove(struct platform_device *pdev)
 		hw_ops->irq_enable(core_data, false);
 	#if IS_ENABLED(CONFIG_FB)
 		fb_unregister_client(&core_data->fb_notifier);
+	#elif IS_ENABLED(CONFIG_DRM)
+		if (gdix_active_panel) {			
+			ret = drm_panel_notifier_unregister(gdix_active_panel,
+					&core_data->fb_notifier);
+			if (ret < 0)
+				ts_err("Failed to unregister fb notifier client");
+		}	
 	#endif
 		core_module_prob_sate = CORE_MODULE_REMOVED;
 		if (atomic_read(&core_data->ts_esd.esd_on))
@@ -2285,7 +2428,7 @@ static int goodix_ts_remove(struct platform_device *pdev)
 
 #if IS_ENABLED(CONFIG_PM)
 static const struct dev_pm_ops dev_pm_ops = {
-#if !IS_ENABLED(CONFIG_FB) && !IS_ENABLED(CONFIG_HAS_EARLYSUSPEND)
+#if !IS_ENABLED(CONFIG_FB)&& !IS_ENABLED(CONFIG_DRM)&& !IS_ENABLED(CONFIG_HAS_EARLYSUSPEND) 
 	.suspend = goodix_ts_pm_suspend,
 	.resume = goodix_ts_pm_resume,
 #endif

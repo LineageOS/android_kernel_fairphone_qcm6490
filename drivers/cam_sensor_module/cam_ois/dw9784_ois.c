@@ -52,7 +52,8 @@ int debug_printf(char *buf, ...)
 }
 #endif
 
-
+struct cam_ois_ctrl_t *g_o_ctrl;
+static struct class *ois_debug_class;
 
 /*Global buffer for flash download*/
 FirmwareContex g_firmwareContext;
@@ -749,6 +750,20 @@ int dw9784_ois_on(struct cam_ois_ctrl_t *o_ctrl)
 
 	return FUNC_FAIL;
 }
+int dw9784_ois_off(struct cam_ois_ctrl_t *o_ctrl)
+{
+    printk("[dw9784_ois_off] servo on mode change");
+    write_reg_16bit_value_16bit(o_ctrl,0x7012, 0x0001); /* set control mode */
+    os_mdelay(1);
+    write_reg_16bit_value_16bit(o_ctrl,0x7011, 0x0001); /* ois off*/
+    os_mdelay(1);
+    if(dw9784_wait_check_register(o_ctrl,0x7010, 0x1001) == FUNC_PASS) { /* busy check */
+        printk("[dw9784_ois_off] ois off success");
+        return FUNC_PASS;
+    }
+    return FUNC_FAIL;
+}
+
 
 int dw9784_servo_on(struct cam_ois_ctrl_t *o_ctrl)
 {
@@ -1228,7 +1243,8 @@ void dw9784_ois_initial_setting(struct cam_ois_ctrl_t *o_ctrl)
 	write_reg_16bit_value_16bit(o_ctrl,0x7019, 0x8000); /* enable tripod mode */
 	write_reg_16bit_value_16bit(o_ctrl,0x701A, 0x8000); /* enable dd func. */
 }
-/*****************add beging for  mmi test funcion*****************
+/*****************************************************************
+jinghuang add beging for  mmi test funcion
 ******************************************************************/
 /*store gyro gain for cal*/
 int dw9784_module_cal_store(struct cam_ois_ctrl_t *o_ctrl)
@@ -1265,8 +1281,118 @@ int dw9784_module_cal_store(struct cam_ois_ctrl_t *o_ctrl)
     }
     return FUNC_PASS;
 }
+/****************************************
+add by jinghuang
+oisreg write:
+echo [write:0x00] [reg_addr] [reg_data] > oisreg
+example:echo 0x00 0x0009 0x0001 > oisreg
+
+oisreg read:
+echo [read 0x01] [reg_addr] > oisreg
+cat oisreg
+example: echo 0x01 0x0009 > oisreg
+cat oisreg
+****************************************/
+char reg_data_buff[32];
+static ssize_t oisreg_show(struct class * class,struct class_attribute * attr,char * buf){
+    strcpy(buf,reg_data_buff);
+    printk("oisreg_show %s",reg_data_buff);
+    return sizeof(reg_data_buff);
+}
+static ssize_t oisreg_store(struct class *class, struct class_attribute *attr,
+                            const char *buf, size_t count){
+    struct cam_ois_ctrl_t *o_ctrl = g_o_ctrl;
+    int flag =0;
+    int reg_addr = 0;
+    int reg_data = 0;
+    sscanf(buf,"%x ",&flag);
+    if(flag == REGRW_WRITE){
+        sscanf(buf,"%x %x %x",&flag,&reg_addr,&reg_data);
+        write_reg_16bit_value_16bit(o_ctrl,reg_addr, reg_data);
+    }else if(flag == REGRW_READ){
+        sscanf(buf,"%x %x",&flag,&reg_addr);
+        read_reg_16bit_value_16bit(o_ctrl,reg_addr, &reg_data);
+    }
+    printk("oisreg_store flag:0x%x,reg_addr:0x%x,reg_data:0x%x",flag,reg_addr,reg_data);
+    sprintf(reg_data_buff,"%x",reg_data);
+    return count;
+}
 
 
+
+/****************************************
+add by jinghuang
+show:
+****************************************/
+static ssize_t oisops_show(struct class *class, struct class_attribute *attr, char *buf){
+    printk("ois oisops_show enter");
+    return 0;
+}
+/****************************************
+add by jinghuang
+store cmd:
+'0' --->dw9784_gyro_ofs_calibration
+'1'---->dw9784_ois_reset
+'2'---->dw9784_servo_on
+'3'---->dw9784_ois_on
+'4'---->dw9784_ois_off
+'5'---->dw9784_module_cal_store
+****************************************/
+static ssize_t oisops_store(struct class *class, struct class_attribute *attr,
+                            const char *buf, size_t count){
+    struct cam_ois_ctrl_t *o_ctrl = g_o_ctrl;
+    char cmd_buff[2];
+    memset(cmd_buff,0,2);
+    if(!o_ctrl){
+        CAM_ERR(CAM_OIS, "o_ctrl is null");
+        return count;
+    }
+    strncpy(cmd_buff,buf,2);
+    printk("oisops_store:cmd_buff=%s",cmd_buff);
+
+    if(cmd_buff[0]=='0')
+        dw9784_gyro_ofs_calibration(o_ctrl);
+    else if(cmd_buff[0]=='1')
+        dw9784_ois_reset(o_ctrl);
+    else if(cmd_buff[0]=='2')
+        dw9784_servo_on(o_ctrl);
+    else if(cmd_buff[0]=='3')
+        dw9784_ois_on(o_ctrl);
+    else if(cmd_buff[0]=='4')
+        dw9784_ois_off(o_ctrl);
+    else if(cmd_buff[0]=='5')
+        dw9784_module_cal_store(o_ctrl);
+    else
+       printk("oisops_store:cmd is not support");
+    return count;
+
+}
+/*******************************************************************************
+ * Debug node
+ * Path: /sys/class/debug_ois
+ * ****************************************************************************/
+static CLASS_ATTR_RW(oisops);
+static CLASS_ATTR_RW(oisreg);
+int ois_creat_sysfs(struct cam_ois_ctrl_t *o_ctrl){
+    int ret = -1;
+    g_o_ctrl = o_ctrl;
+    printk("ois ois_creat_sysfs start");
+    if(!ois_debug_class){
+        printk("ois ois_creat_sysfs!");
+        ois_debug_class = class_create(THIS_MODULE,"debug_ois");
+        ret = class_create_file(ois_debug_class,&class_attr_oisops);
+        if(ret<0){
+            printk("create oisops failed,ret %d",ret);
+            return ret;
+        }
+        ret = class_create_file(ois_debug_class,&class_attr_oisreg);
+        if(ret < 0){
+            printk("create oisreg failed,ret %d",ret);
+            return ret;
+        }
+    }
+    return 0;
+}
 /*add end for  mmi test funcion*/
 
 void hall_sensitivity_cal_example(struct cam_ois_ctrl_t *o_ctrl)

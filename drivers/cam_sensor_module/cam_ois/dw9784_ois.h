@@ -170,3 +170,8 @@ typedef struct
 #define REF_GYRO_RESULT			1000
 #define OIS_ERROR			(-1)
 #define OIS_SUCCESS			(0)
+enum regrw_flag {
+    REGRW_WRITE = 0,
+    REGRW_READ = 1,
+};
+

@@ -1791,9 +1791,11 @@ static const struct msm_pingroup yupik_groups[] = {
 	[182] = SDC_QDSD_PINGROUP(sdc2_data, 0x1b4000, 9, 0),
 };
 
+/*Delete by T2M-mingwu.zhang for FP5-129 remarks: liberate gpio50 gpio51. [Begin]*/
 static const int yupik_reserved_gpios[] = {
-	32, 33,50, 51, -1
+	32, 33, -1
 };
+/*Delete by T2M-mingwu.zhang [End]*/
 static struct pinctrl_qup yupik_qup_regs[] = {
 	QUP_I3C(0, QUP_I3C_0_MODE_OFFSET),
 	QUP_I3C(1, QUP_I3C_1_MODE_OFFSET),

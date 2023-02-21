@@ -1,9 +1,19 @@
-/**
- * ${ANDROID_BUILD_TOP}/vendor/focaltech/src/base/focaltech/ff_log.h
+/*
  *
- * Copyright (C) 2014-2017 FocalTech Systems Co., Ltd. All Rights Reserved.
+ * FocalTech TouchScreen driver.
  *
-**/
+ * Copyright (c) 2012-2020, Focaltech Ltd. All rights reserved.
+ *
+ * This software is licensed under the terms of the GNU General Public
+ * License version 2, as published by the Free Software Foundation, and
+ * may be copied, distributed, and modified under those terms.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ */
 
 #ifndef __FF_LOGGING_H__
 #define __FF_LOGGING_H__
@@ -13,7 +23,9 @@
  * # undef LOG_TAG
  * #define LOG_TAG "newtag"
  */
+#ifndef LOG_TAG
 #define LOG_TAG "focaltech"
+#endif
 
 /*
  * Log level can be used in 'logcat <tag>[:priority]', and also be
@@ -26,6 +38,7 @@ typedef enum {
     FF_LOG_LEVEL_INF = 3, /* Info    */
     FF_LOG_LEVEL_WRN = 4, /* Warning */
     FF_LOG_LEVEL_ERR = 5, /* Error   */
+    FF_LOG_LEVEL_DIS = 6, /* Disable */
 } ff_log_level_t;
 
 /*
@@ -33,54 +46,54 @@ typedef enum {
  * default level is FF_LOG_LEVEL_ALL(all the logs will be output).
  */
 #ifndef __FF_EARLY_LOG_LEVEL
-#define __FF_EARLY_LOG_LEVEL FF_LOG_LEVEL_ALL
+#define __FF_EARLY_LOG_LEVEL FF_LOG_LEVEL_DBG
 #endif
 
 /*
  * Log level can be runtime configurable.
  */
-extern ff_log_level_t g_log_level; /* = __FF_EARLY_LOG_LEVEL */
+extern ff_log_level_t g_ff_log_level; /* = __FF_EARLY_LOG_LEVEL */
 
 /*
  * Using the following five macros for conveniently logging.
  */
 #define FF_LOGV(...)                                               \
     do {                                                           \
-        if (g_log_level <= FF_LOG_LEVEL_VBS) {                     \
+        if (g_ff_log_level <= FF_LOG_LEVEL_VBS) {                  \
             ff_log_printf(FF_LOG_LEVEL_VBS, LOG_TAG, __VA_ARGS__); \
-        };                                                         \
+        }                                                          \
     } while (0)
 
 #define FF_LOGD(...)                                               \
     do {                                                           \
-        if (g_log_level <= FF_LOG_LEVEL_DBG) {                     \
+        if (g_ff_log_level <= FF_LOG_LEVEL_DBG) {                  \
             ff_log_printf(FF_LOG_LEVEL_DBG, LOG_TAG, __VA_ARGS__); \
-        };                                                         \
+        }                                                          \
     } while (0)
 
 #define FF_LOGI(...)                                               \
     do {                                                           \
-        if (g_log_level <= FF_LOG_LEVEL_INF) {                     \
+        if (g_ff_log_level <= FF_LOG_LEVEL_INF) {                  \
             ff_log_printf(FF_LOG_LEVEL_INF, LOG_TAG, __VA_ARGS__); \
-        };                                                         \
+        }                                                          \
     } while (0)
 
 #define FF_LOGW(...)                                               \
     do {                                                           \
-        if (g_log_level <= FF_LOG_LEVEL_WRN) {                     \
+        if (g_ff_log_level <= FF_LOG_LEVEL_WRN) {                  \
             ff_log_printf(FF_LOG_LEVEL_WRN, LOG_TAG, __VA_ARGS__); \
-        };                                                         \
+        }                                                          \
     } while (0)
 
 #define FF_LOGE(format, ...)                                       \
     do {                                                           \
-        if (g_log_level <= FF_LOG_LEVEL_ERR) {                     \
+        if (g_ff_log_level <= FF_LOG_LEVEL_ERR) {                  \
             const char *__fname__ = __FILE__, *s = __fname__;      \
             do { if (*s == '/') __fname__ = s + 1; } while (*s++); \
             ff_log_printf(FF_LOG_LEVEL_ERR, LOG_TAG,               \
                     "error at %s[%s:%d]: " format, __FUNCTION__,   \
                     __fname__, __LINE__, ##__VA_ARGS__);           \
-        };                                                         \
+        }                                                          \
     } while (0)
 
 #ifdef __cplusplus
@@ -88,7 +101,7 @@ extern "C" {
 #endif
 
 /*
- * Logging API. Do NOT use it directly but FF_LOF* instead.
+ * Logging API. Do NOT use it directly but FF_LOG* instead.
  *
  * @params
  *  level: Logging level for logcat.

@@ -27,7 +27,6 @@ obj-$(CONFIG_INPUT_TOUCHSCREEN)	+= touchscreen/
 obj-$(CONFIG_INPUT_MISC)	+= misc/
 
 obj-$(CONFIG_INPUT_APMPOWER)	+= apm-power.o
-
 obj-$(CONFIG_RMI4_CORE)		+= rmi4/
 
-obj-$(CONFIG_FINGER_FOCAL)		+= finggerprint/focal_finger/
+obj-$(CONFIG_INPUT_FINGERPRINT)	+= finger/

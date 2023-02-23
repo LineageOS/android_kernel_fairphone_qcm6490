@@ -54,7 +54,7 @@ static int g_orientation = 0;
 
 void ptn_orientation_switch(int orientation)
 {
-	pr_info("%s: orientation=%d\n", __func__, orientation);
+	pr_err("%s: orientation=%d\n", __func__, orientation);
 	if (orientation == 0) {
 		ptn_write_reg(0x0b, 0x01);
 	} else if (orientation == 1) {
@@ -73,7 +73,7 @@ void ptn_usb_orientation_switch(int orientation)
 {
 	pr_err("%s: orientation=%d\n", __func__, orientation);
 
-	if (orientation == 2)
+	if (orientation == 1)
 		ptn_write_reg(0x0b, 0x01);
 	else
 		ptn_write_reg(0x0b, 0x21);
@@ -82,7 +82,7 @@ EXPORT_SYMBOL(ptn_usb_orientation_switch);
 
 void ptn_lane_switch(int lane, int bwcode)
 {
-	pr_info("%s: lane=%d, orientation=%d bwcode=%d\n", __func__, lane, g_orientation, bwcode);
+	pr_err("%s: lane=%d, orientation=%d bwcode=%d\n", __func__, lane, g_orientation, bwcode);
 	if (lane == 2 && g_orientation == 1) {
 		ptn_write_reg(0x0d, 0x80);
 		ptn_write_reg(0x0b, 0x0a);
@@ -272,7 +272,9 @@ static int ptn36502_probe(struct i2c_client *client, const struct i2c_device_id 
 
 	gpio_direction_output(redrive_ldo1v8_en,1);
 	msleep(20);
-	//gpio_direction_output(redriver_en,1); //zxz add , the en pin need hi-z status
+
+	//zxz add , the en pin need hi-z status .  V01 had change to high no need sw gpio control .
+	//gpio_direction_output(redriver_en,1); 
 
 
 	ptn_write_reg(0x0b, 0x01);

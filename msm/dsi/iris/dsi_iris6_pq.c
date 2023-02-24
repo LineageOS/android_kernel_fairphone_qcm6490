@@ -2180,7 +2180,7 @@ int iris_kickoff(void *phys_enc)
 		return -EFAULT;
 
 	if (pcfg->valid < PARAM_PARSED) {
-		IRIS_LOGW("%s(), doesn't parse iris param", __func__);
+		//IRIS_LOGW("%s(), doesn't parse iris param", __func__);
 		return 0;
 	}
 

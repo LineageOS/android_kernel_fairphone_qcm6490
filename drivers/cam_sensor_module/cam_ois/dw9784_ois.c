@@ -1236,6 +1236,69 @@ void dw9784_flash_ldt_register_read(struct cam_ois_ctrl_t *o_ctrl)
 	}
 	dw9784_ois_reset(o_ctrl);
 }
+/*****************************************************************
+jinghuang add beging
+af drift comp
+******************************************************************/
+static int dw9784_ois_acc_gain(struct cam_ois_ctrl_t *o_ctrl,int targetpos);
+
+static int dw9784_ois_af_drift(int targetpos){
+    struct cam_ois_ctrl_t *o_ctrl = g_o_ctrl;
+    int ret=0;
+    ret = write_reg_16bit_value_16bit(o_ctrl,0x7070,targetpos);  //af drift comp
+    dw9784_ois_acc_gain(o_ctrl,targetpos);//acc gain for lens shift
+    return ret;
+}
+static ssize_t afdrift_show(struct class *class, struct class_attribute *attr, char *buf){
+    printk("ois afdrift_show enter");
+    return 0;
+}
+static ssize_t afdrift_store(struct class *class, struct class_attribute *attr,
+                            const char *buf, size_t count){
+    int targetpos = 0;
+    sscanf(buf,"%x",&targetpos);
+    CAM_DBG(CAM_OIS,"ois afdrift_store targetpos=0x%x",targetpos);
+    dw9784_ois_af_drift(targetpos);
+    return count;
+}
+
+/*****************************************************************
+jinghuang add
+acc gain  for lens shift
+*****************************************************************/
+int macroDAC = 0xd44;//default value
+int infinityDAC = 0x200;//default value
+static int dw9784_ois_acc_gain(struct cam_ois_ctrl_t *o_ctrl,int targetpos){
+    float k,distance,shift_h,normalized_h;
+    int acc_gain,ret;
+    k =((float)(10000.0-100.0))/((float)(macroDAC-infinityDAC));
+    if(targetpos < macroDAC)
+        //distance: mm  targetpos:DAC
+        distance=((float)macroDAC-(float)targetpos)*k+100.0;
+    else
+        distance=100.0-k*((float)targetpos-(float)macroDAC);//distance: mm	targetpos:DAC
+    if(distance < 0)
+        distance = 0;
+    shift_h = (5.56/distance)*3.5;//shift_h:mm
+    normalized_h=shift_h*15.41624;
+    acc_gain =(int)(6500*normalized_h);
+
+    CAM_DBG(CAM_OIS,"dw9784_ois_acc_gain acc_gain =0x%x",acc_gain);
+    ret = write_reg_16bit_value_16bit(o_ctrl,0x7076,acc_gain);//x
+    ret = write_reg_16bit_value_16bit(o_ctrl,0x7077,acc_gain);//y
+    return ret;
+}
+static ssize_t accgain_show(struct class *class, struct class_attribute *attr, char *buf){
+    printk("ois accgain_show enter");
+    return 0;
+}
+static ssize_t accgain_store(struct class *class, struct class_attribute *attr,
+                            const char *buf, size_t count){
+    sscanf(buf,"%x %x",&macroDAC,&infinityDAC);
+    printk("ois gccgain_store macroDAC =0x%x,infinityDAC=0x%x",macroDAC,infinityDAC);
+
+    return count;
+}
 
 
 void dw9784_ois_initial_setting(struct cam_ois_ctrl_t *o_ctrl)
@@ -1373,6 +1436,9 @@ static ssize_t oisops_store(struct class *class, struct class_attribute *attr,
  * ****************************************************************************/
 static CLASS_ATTR_RW(oisops);
 static CLASS_ATTR_RW(oisreg);
+static CLASS_ATTR_RW(afdrift);
+static CLASS_ATTR_RW(accgain);
+
 int ois_creat_sysfs(struct cam_ois_ctrl_t *o_ctrl){
     int ret = -1;
     g_o_ctrl = o_ctrl;
@@ -1388,6 +1454,16 @@ int ois_creat_sysfs(struct cam_ois_ctrl_t *o_ctrl){
         ret = class_create_file(ois_debug_class,&class_attr_oisreg);
         if(ret < 0){
             printk("create oisreg failed,ret %d",ret);
+            return ret;
+        }
+        ret = class_create_file(ois_debug_class,&class_attr_afdrift);
+        if(ret < 0){
+            printk("create afdrift failed,ret %d",ret);
+            return ret;
+        }
+        ret = class_create_file(ois_debug_class,&class_attr_accgain);
+        if(ret < 0){
+            printk("create accgain failed,ret %d",ret);
             return ret;
         }
     }

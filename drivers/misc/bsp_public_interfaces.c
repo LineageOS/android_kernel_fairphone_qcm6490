@@ -85,7 +85,8 @@ EXPORT_SYMBOL(get_hw_version);
 static ssize_t sysfs_hw_version_show(struct kobject *kobj,
                 struct kobj_attribute *attr, char *buf)
 {
-	return sprintf(buf, "%d\n", pdata->hw_version);
+	return sprintf(buf, "%s\n", pdata->board_version);
+	//return sprintf(buf, "%d\n", pdata->hw_version);
 }
 
 static struct kobj_attribute sysfs_attrs[] = {
@@ -141,7 +142,16 @@ static int board_check_hwid(struct board_platform_data *pdata)
                         (pdata->id1_val << 1)|
                         (pdata->id0_val << 0);
 
-	printk(KERN_ERR"HW Version:(%d).\n", pdata->hw_version);
+	if (pdata->hw_version == 0) {
+		strcpy(pdata->board_version,"DVT1");
+	} else if (pdata->hw_version == 1) {
+		strcpy(pdata->board_version,"DVT2");
+	} else if (pdata->hw_version == 2) {
+		strcpy(pdata->board_version,"MVT");
+	} else {
+		strcpy(pdata->board_version,"UNKNOWN");
+	}
+	printk(KERN_INFO"HW Version:(%d).\n", pdata->hw_version);
 
 	return 0;
 }

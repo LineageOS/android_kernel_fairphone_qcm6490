@@ -11,6 +11,8 @@ struct board_platform_data {
 #endif
 	const char *name;
 
+	char board_version[8];
+
 	unsigned board_id0;
 	unsigned board_id1;
 	unsigned board_id2;

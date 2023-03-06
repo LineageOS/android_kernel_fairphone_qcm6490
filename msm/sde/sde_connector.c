@@ -24,10 +24,6 @@
 #define BL_NODE_NAME_SIZE 32
 #define HDR10_PLUS_VSIF_TYPE_CODE      0x81
 
-#ifdef CONFIG_PROJECT_FP5
-#define T2M_DISABLE_BL_THERMAL		0x01
-#endif
-
 /* Autorefresh will occur after FRAME_CNT frames. Large values are unlikely */
 #define AUTOREFRESH_MAX_FRAME_CNT 6
 
@@ -233,8 +229,9 @@ static int sde_backlight_setup(struct sde_connector *c_conn,
 	 * In TVM, thermal cooling device is not enabled. Registering with dummy
 	 * thermal device will return a NULL leading to a failure. So skip it.
 	 */
-	if (sde_in_trusted_vm(sde_kms) || T2M_DISABLE_BL_THERMAL)
+	if (sde_in_trusted_vm(sde_kms))
 		goto done;
+
 	c_conn->n.notifier_call = sde_backlight_cooling_cb;
 	c_conn->cdev = backlight_cdev_register(dev->dev, c_conn->bl_device,
 							&c_conn->n);

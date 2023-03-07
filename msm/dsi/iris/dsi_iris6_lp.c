@@ -1118,7 +1118,7 @@ void _iris_dbp_init(bool enable, bool chain)
 
 	regval.ip = IRIS_IP_RX;
 	regval.opt_id = ID_MIPI_BYPASS_CTRL_DMA;
-	regval.mask = 0x2;
+	regval.mask = pcfg->vc_ctrl.vc_enable ? 0x2: 0xa;
 	regval.value = enable ? 0x2 : 0x0;
 	iris_update_bitmask_regval_nonread(&regval, false);
 	iris_init_update_ipopt_t(regval.ip, regval.opt_id, regval.opt_id, 0x01);

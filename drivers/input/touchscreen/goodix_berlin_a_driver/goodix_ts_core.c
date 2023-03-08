@@ -30,7 +30,9 @@
 // #include "../../../video/fbdev/core/fb_firefly.h"
 
 #define GOODIX_DEFAULT_CFG_NAME		"goodix_cfg_group.cfg"
-#define GOOIDX_INPUT_PHYS			"goodix_ts/input0"
+
+struct goodix_module goodix_modules;
+int core_module_prob_sate = CORE_MODULE_UNPROBED;
 
 #if IS_ENABLED(CONFIG_DRM)
 #include <drm/drm_panel.h>
@@ -92,9 +94,6 @@ int check_default_tp(struct device_node *dt, const char *prop)
 	return ret;
 }
 #endif
-
-struct goodix_module goodix_modules;
-int core_module_prob_sate = CORE_MODULE_UNPROBED;
 
 static int goodix_send_ic_config(struct goodix_ts_core *cd, int type);
 /**
@@ -1301,6 +1300,8 @@ static irqreturn_t goodix_ts_threadirq_func(int irq, void *data)
 	struct goodix_ts_esd *ts_esd = &core_data->ts_esd;
 	int ret;
 
+	disable_irq_nosync(core_data->irq);
+
 	ts_esd->irq_status = true;
 	core_data->irq_trig_cnt++;
 	/* inform external module */
@@ -1312,6 +1313,7 @@ static irqreturn_t goodix_ts_threadirq_func(int irq, void *data)
 		ret = ext_module->funcs->irq_event(core_data, ext_module);
 		if (ret == EVT_CANCEL_IRQEVT) {
 			mutex_unlock(&goodix_modules.mutex);
+			enable_irq(core_data->irq);
 			return IRQ_HANDLED;
 		}
 	}
@@ -1334,6 +1336,7 @@ static irqreturn_t goodix_ts_threadirq_func(int irq, void *data)
 			goodix_ts_request_handle(core_data, ts_event);
 	}
 
+	enable_irq(core_data->irq);
 	return IRQ_HANDLED;
 }
 
@@ -1380,7 +1383,7 @@ static int goodix_ts_power_init(struct goodix_ts_core *core_data)
 	struct device *dev = core_data->bus->dev;
 	int ret = 0;
 
-	ts_info("Power init");
+	ts_err("Power init");
 	if (strlen(ts_bdata->avdd_name)) {
 		core_data->avdd = devm_regulator_get(dev,
 				 ts_bdata->avdd_name);
@@ -1391,7 +1394,7 @@ static int goodix_ts_power_init(struct goodix_ts_core *core_data)
 			return ret;
 		}
 	} else {
-		ts_info("Avdd name is NULL");
+		ts_err("Avdd name is NULL");
 	}
 
 	if (strlen(ts_bdata->iovdd_name)) {
@@ -1403,7 +1406,7 @@ static int goodix_ts_power_init(struct goodix_ts_core *core_data)
 			core_data->iovdd = NULL;
 		}
 	} else {
-		ts_info("iovdd name is NULL");
+		ts_err("iovdd name is NULL");
 	}
 
 	return ret;
@@ -1517,6 +1520,7 @@ static int goodix_ts_input_dev_config(struct goodix_ts_core *core_data)
 {
 	struct goodix_ts_board_data *ts_bdata = board_data(core_data);
 	struct input_dev *input_dev = NULL;
+	static char ts_phys[32];
 	int r;
 
 	input_dev = input_allocate_device();
@@ -1529,10 +1533,12 @@ static int goodix_ts_input_dev_config(struct goodix_ts_core *core_data)
 	input_set_drvdata(input_dev, core_data);
 
 	input_dev->name = GOODIX_CORE_DRIVER_NAME;
-	input_dev->phys = GOOIDX_INPUT_PHYS;
-	input_dev->id.product = 0xDEAD;
-	input_dev->id.vendor = 0xBEEF;
-	input_dev->id.version = 10427;
+	sprintf(ts_phys, "%s/input0", input_dev->name);
+	input_dev->phys = ts_phys;
+	input_dev->id.bustype = core_data->bus->bus_type;
+	input_dev->id.vendor = 0x27C6;
+	input_dev->id.product = 0x0001;
+	input_dev->id.version = 0x0100;
 
 	set_bit(EV_SYN, input_dev->evbit);
 	set_bit(EV_KEY, input_dev->evbit);
@@ -1575,6 +1581,7 @@ static int goodix_ts_pen_dev_config(struct goodix_ts_core *core_data)
 {
 	struct goodix_ts_board_data *ts_bdata = board_data(core_data);
 	struct input_dev *pen_dev = NULL;
+	static char ts_phys[32];
 	int r;
 
 	pen_dev = input_allocate_device();
@@ -1587,9 +1594,12 @@ static int goodix_ts_pen_dev_config(struct goodix_ts_core *core_data)
 	input_set_drvdata(pen_dev, core_data);
 
 	pen_dev->name = GOODIX_PEN_DRIVER_NAME;
-	pen_dev->id.product = 0xDEAD;
-	pen_dev->id.vendor = 0xBEEF;
-	pen_dev->id.version = 10427;
+	sprintf(ts_phys, "%s/input0", pen_dev->name);
+	pen_dev->phys = ts_phys;
+	pen_dev->id.bustype = core_data->bus->bus_type;
+	pen_dev->id.vendor = 0x27C6;
+	pen_dev->id.product = 0x0002;
+	pen_dev->id.version = 0x0100;
 
 	pen_dev->evbit[0] |= BIT_MASK(EV_KEY) | BIT_MASK(EV_ABS);
 	set_bit(ABS_X, pen_dev->absbit);
@@ -1729,19 +1739,20 @@ static int goodix_esd_notifier_callback(struct notifier_block *nb,
 			struct goodix_ts_esd, esd_notifier);
 
 	switch (action) {
-	case NOTIFY_SUSPEND:
-		goodix_ts_power_off(ts_esd->ts_core);
-		break;	
 	case NOTIFY_FWUPDATE_START:
+	case NOTIFY_SUSPEND:
+ts_err("zmw---SUSPEND");	
+		goodix_ts_power_off(ts_esd->ts_core);
+		break;		
 	case NOTIFY_ESD_OFF:
 		goodix_ts_esd_off(ts_esd->ts_core);
 		break;
-
-	case NOTIFY_RESUME:
-		goodix_ts_power_on(ts_esd->ts_core);
-		break;		
 	case NOTIFY_FWUPDATE_FAILED:
 	case NOTIFY_FWUPDATE_SUCCESS:
+	case NOTIFY_RESUME:
+ts_err("zmw---RESUME");	
+		goodix_ts_power_on(ts_esd->ts_core);
+		break;	
 	case NOTIFY_ESD_ON:
 		goodix_ts_esd_on(ts_esd->ts_core);
 		break;
@@ -2022,7 +2033,7 @@ int goodix_ts_drm_notifier_callback(struct notifier_block *self,
 #endif
 
 #if IS_ENABLED(CONFIG_PM)
-#if !IS_ENABLED(CONFIG_FB)&& !IS_ENABLED(CONFIG_DRM)&& !IS_ENABLED(CONFIG_HAS_EARLYSUSPEND) 
+#if !IS_ENABLED(CONFIG_FB)&& !IS_ENABLED(CONFIG_DRM)&& !IS_ENABLED(CONFIG_HAS_EARLYSUSPEND)
 /**
  * goodix_ts_pm_suspend - PM suspend function
  * Called by kernel during system suspend phrase
@@ -2077,6 +2088,31 @@ static int goodix_generic_noti_callback(struct notifier_block *self,
 		break;
 	}
 	return 0;
+}
+
+static void goodix_self_check(struct work_struct *work)
+{
+	struct goodix_ts_core *cd =
+			container_of(work, struct goodix_ts_core, self_check_work);
+	u32 fw_state_addr = cd->ic_info.misc.fw_state_addr;
+	int update_flag = UPDATE_MODE_BLOCK | UPDATE_MODE_SRC_REQUEST | UPDATE_MODE_FORCE;
+	u8 cur_cycle_cnt = 0;
+	u8 pre_cycle_cnt = 0;
+	int err_cnt = 0;
+	int retry = 5;
+
+	while (retry--) {
+		cd->hw_ops->read(cd, fw_state_addr, &cur_cycle_cnt, 1);
+		if (cur_cycle_cnt == pre_cycle_cnt)
+			err_cnt++;
+		pre_cycle_cnt = cur_cycle_cnt;
+		msleep(20);
+	}
+	if (err_cnt > 1) {
+		ts_err("Warning! The firmware maybe running abnormal, need upgrade.");
+		goodix_do_fw_update(cd->ic_configs[CONFIG_TYPE_NORMAL],
+				update_flag);
+	}
 }
 
 int goodix_ts_stage2_init(struct goodix_ts_core *cd)
@@ -2136,6 +2172,10 @@ int goodix_ts_stage2_init(struct goodix_ts_core *cd)
 	/* inspect init */
 	inspect_module_init(cd);
 
+	/* Do self check on first boot */
+	INIT_WORK(&cd->self_check_work, goodix_self_check);
+	schedule_work(&cd->self_check_work);
+
 	return 0;
 exit:
 	goodix_ts_pen_dev_remove(cd);
@@ -2186,47 +2226,41 @@ static int goodix_later_init_thread(void *data)
 	struct goodix_ts_hw_ops *hw_ops = cd->hw_ops;
 
 	/* step 1: read version */
-	ret = cd->hw_ops->read_version(cd, &cd->fw_version);
+	ret = hw_ops->read_version(cd, &cd->fw_version);
 	if (ret < 0) {
 		ts_err("failed to get version info, try to upgrade");
 		update_flag |= UPDATE_MODE_FORCE;
 	}
 
-	/* step 2: get config data from config bin */
+	/* step 2: read ic info */
+	ret = hw_ops->get_ic_info(cd, &cd->ic_info);
+	if (ret < 0) {
+		ts_err("failed to get ic info, try to upgrade");
+		update_flag |= UPDATE_MODE_FORCE;
+	}
+
+	/* step 3: get config data from config bin */
 	ret = goodix_get_config_proc(cd);
 	if (ret)
 		ts_info("no valid ic config found");
 	else
 		ts_info("success get valid ic config");
 
-	/* step 3: init fw struct add try do fw upgrade */
+	/* step 4: init fw struct add try do fw upgrade */
 	ret = goodix_fw_update_init(cd);
 	if (ret) {
 		ts_err("failed init fw update module");
 		goto err_out;
 	}
 
+	/* step 5: do upgrade */
 	ts_info("update flag: 0x%X", update_flag);
 	ret = goodix_do_fw_update(cd->ic_configs[CONFIG_TYPE_NORMAL],
 			update_flag);
 	if (ret)
 		ts_err("failed do fw update");
 
-	/* step 4: get fw version and ic_info
-	 * at this step we believe that the ic is in normal mode,
-	 * if the version info is invalid there must have some
-	 * problem we cann't cover so exit init directly.
-	 */
-	ret = hw_ops->read_version(cd, &cd->fw_version);
-	if (ret) {
-		ts_err("invalid fw version, abort");
-		goto uninit_fw;
-	}
-	ret = hw_ops->get_ic_info(cd, &cd->ic_info);
-	if (ret) {
-		ts_err("invalid ic info, abort");
-		goto uninit_fw;
-	}
+	print_ic_info(&cd->ic_info);
 
 	/* the recomend way to update ic config is throuth ISP,
 	 * if not we will send config with interactive mode
@@ -2290,7 +2324,7 @@ static int goodix_ts_probe(struct platform_device *pdev)
 	struct goodix_bus_interface *bus_interface;
 	int ret;
 
-	ts_err("IN_GT9916");
+	ts_err("IN_GT9897");
 
 	bus_interface = pdev->dev.platform_data;
 	if (!bus_interface) {
@@ -2428,7 +2462,7 @@ static int goodix_ts_remove(struct platform_device *pdev)
 
 #if IS_ENABLED(CONFIG_PM)
 static const struct dev_pm_ops dev_pm_ops = {
-#if !IS_ENABLED(CONFIG_FB)&& !IS_ENABLED(CONFIG_DRM)&& !IS_ENABLED(CONFIG_HAS_EARLYSUSPEND) 
+#if !IS_ENABLED(CONFIG_FB)&& !IS_ENABLED(CONFIG_DRM)&& !IS_ENABLED(CONFIG_HAS_EARLYSUSPEND)
 	.suspend = goodix_ts_pm_suspend,
 	.resume = goodix_ts_pm_resume,
 #endif

@@ -1746,7 +1746,7 @@ static int write_eeprom_memory(struct cam_eeprom_ctrl_t *e_ctrl, uint32_t size)
 	/*write block1*/
 	for (i = 0; i < CALI_DATA_BLOCK_SIZE; i++) {
 		i2c_reg_array.reg_addr = CALI_DATA_BLOCK_ADDR + i;
-		i2c_reg_array.reg_data = bin_buffer[i++];
+		i2c_reg_array.reg_data = bin_buffer[i];
 
 		rc = camera_io_dev_write(&e_ctrl->io_master_info,&i2c_reg_settings);
 

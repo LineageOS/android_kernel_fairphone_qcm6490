@@ -96,6 +96,8 @@ enum battery_property_id {
 	BATT_RESISTANCE,
 	BATT_POWER_NOW,
 	BATT_POWER_AVG,
+	//zxzid add for battery resistance id
+	BATT_RESISTANCE_ID,
 	BATT_PROP_MAX,
 };
 
@@ -283,6 +285,8 @@ static const int battery_prop_map[BATT_PROP_MAX] = {
 	[BATT_TTE_AVG]		= POWER_SUPPLY_PROP_TIME_TO_EMPTY_AVG,
 	[BATT_POWER_NOW]	= POWER_SUPPLY_PROP_POWER_NOW,
 	[BATT_POWER_AVG]	= POWER_SUPPLY_PROP_POWER_AVG,
+	//zxzid add for battery resistance id
+	[BATT_RESISTANCE_ID]	= POWER_SUPPLY_PROP_RESISTANCE_ID,
 };
 
 static const int usb_prop_map[USB_PROP_MAX] = {
@@ -1193,6 +1197,8 @@ static enum power_supply_property battery_props[] = {
 	POWER_SUPPLY_PROP_TIME_TO_EMPTY_AVG,
 	POWER_SUPPLY_PROP_POWER_NOW,
 	POWER_SUPPLY_PROP_POWER_AVG,
+	/* zxzid add for battery resistance id */
+	POWER_SUPPLY_PROP_RESISTANCE_ID,
 };
 
 static const struct power_supply_desc batt_psy_desc = {

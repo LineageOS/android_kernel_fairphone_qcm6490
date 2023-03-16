@@ -119,14 +119,54 @@ static int sde_backlight_device_update_status(struct backlight_device *bd)
 		brightness = 0;
 
 	display = (struct dsi_display *) c_conn->display;
+/*Add by T2M-mingwu.zhang for FP5-129 remarks: Backlight curve mapping.[Begin]*/ 	
+#ifdef CONFIG_PROJECT_FP5
+	if (brightness > display->panel->bl_config.brightness_max_level)
+		brightness = display->panel->bl_config.brightness_max_level;
+	if (brightness > c_conn->thermal_max_brightness)
+		brightness = c_conn->thermal_max_brightness;
+#else
 	if (brightness > display->panel->bl_config.bl_max_level)
 		brightness = display->panel->bl_config.bl_max_level;
 	if (brightness > c_conn->thermal_max_brightness)
 		brightness = c_conn->thermal_max_brightness;
+#endif
+/*Add by T2M-mingwu.zhang [End]*/	
 
 	/* map UI brightness into driver backlight level with rounding */
+/*Add by T2M-mingwu.zhang for FP5-129 remarks: Backlight curve mapping.[Begin]*/	
+#ifdef CONFIG_PROJECT_FP5
+	if (!strcmp(display->display_type, "primary")){
+		if(brightness <= 0){
+			bl_lvl = 0;
+		} else if(brightness >= 1 && brightness <= 11){
+			bl_lvl = (int)(10 * brightness - 6);
+		} else if(brightness > 11 && brightness <= 30){
+			bl_lvl = (int)(15.7 * brightness - 70);
+		} else if(brightness > 30 && brightness <= 2047){
+			bl_lvl = (int)(1.54 * brightness + 363);
+		} else {
+			bl_lvl = (int)(0.28 * brightness + 2948);
+		}
+
+		if(bl_lvl > display->panel->bl_config.bl_max_level)	
+			bl_lvl = display->panel->bl_config.bl_max_level;
+
+		if ((display->panel->power_mode == SDE_MODE_DPMS_LP1) ||
+				(display->panel->power_mode == SDE_MODE_DPMS_LP2)) {
+			if (brightness == 1)
+				bl_lvl = 900;
+		}
+	} else {
+		bl_lvl = mult_frac(brightness, display->panel->bl_config.bl_max_level,
+				display->panel->bl_config.brightness_max_level);		
+	}
+#else
 	bl_lvl = mult_frac(brightness, display->panel->bl_config.bl_max_level,
 			display->panel->bl_config.brightness_max_level);
+#endif	
+	SDE_DEBUG("backlight [%s] bl_lvl = %d brightness = %d \n",__func__,bl_lvl,brightness);
+/*Add by T2M-mingwu.zhang [End]*/
 
 	if (!bl_lvl && brightness)
 		bl_lvl = 1;

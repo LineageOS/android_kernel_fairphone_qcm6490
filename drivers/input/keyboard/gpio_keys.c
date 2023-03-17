@@ -62,13 +62,12 @@ struct gpio_keys_drvdata {
 	struct gpio_button_data data[0];
 };
 
-#define CONFIG_TCT_CLAMSHELL 1
-
+// CONFIG_T2M_HALL_SENSOR
 
 struct wakeup_source * gpio_key_wake_src = NULL;
 #define WAKEBYTE_TIMEOUT_MSEC	(800)
 
-#ifdef CONFIG_TCT_CLAMSHELL
+#ifdef CONFIG_T2M_HALL_SENSOR
 #include <linux/regulator/consumer.h>
 static void hall_sensor_init(struct device *dev);
 
@@ -79,7 +78,7 @@ struct hall_sensor_data {
 };
 #endif
 
-#define CONFIG_TCT_LITO_CHICAGO 1 
+//#define CONFIG_TCT_LITO_CHICAGO 1 
 
 #ifdef CONFIG_TCT_LITO_CHICAGO
 int hall_sensor_state = 0;
@@ -370,7 +369,7 @@ static DEVICE_ATTR(disabled_switches, S_IWUSR | S_IRUGO,
 		   gpio_keys_show_disabled_switches,
 		   gpio_keys_store_disabled_switches);
 
-#ifdef CONFIG_TCT_CLAMSHELL
+#ifdef CONFIG_T2M_HALL_SENSOR
 static ssize_t gpio_keys_show_hall_sensor_status(struct device *dev,
                 struct device_attribute *attr,
                 char *buf)
@@ -402,7 +401,7 @@ static struct attribute *gpio_keys_attrs[] = {
 	&dev_attr_switches.attr,
 	&dev_attr_disabled_keys.attr,
 	&dev_attr_disabled_switches.attr,
-#ifdef CONFIG_TCT_CLAMSHELL
+#ifdef CONFIG_T2M_HALL_SENSOR
     &dev_attr_hall_sensor_status.attr,
 #endif
 	NULL,
@@ -968,13 +967,13 @@ static int gpio_keys_probe(struct platform_device *pdev)
 	gpio_key_wake_src = wakeup_source_register(dev,"gpio_key");
 	if(!gpio_key_wake_src)
 		dev_err(dev, "Unable to register wakeup source \n");
-#ifdef CONFIG_TCT_CLAMSHELL
+#ifdef CONFIG_T2M_HALL_SENSOR
     hall_sensor_init(dev);
 #endif
 	return 0;
 }
 
-#ifdef CONFIG_TCT_CLAMSHELL
+#ifdef CONFIG_T2M_HALL_SENSOR
 static ssize_t class_hall_sensor_status_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -1172,8 +1171,19 @@ static int __maybe_unused gpio_keys_resume(struct device *dev)
 
 static SIMPLE_DEV_PM_OPS(gpio_keys_pm_ops, gpio_keys_suspend, gpio_keys_resume);
 
+static void gpio_keys_shutdown(struct platform_device *pdev)
+{
+	int ret;
+
+	ret = gpio_keys_suspend(&pdev->dev);
+	if (ret)
+		dev_err(&pdev->dev, "failed to shutdown\n");
+}
+
+
 static struct platform_driver gpio_keys_device_driver = {
 	.probe		= gpio_keys_probe,
+	.shutdown	= gpio_keys_shutdown,
 	.driver		= {
 		.name	= "gpio-keys",
 		.pm	= &gpio_keys_pm_ops,

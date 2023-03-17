@@ -13,6 +13,8 @@
 because in kener vision 3.10 gpio_number=base(8916 8936 8939 is 902)+gpio_index , the base value we can see in "gpio_lib.conf" file .  TCTNB  ZXZ add in 2014/12/13 */
 
 static int npi_down_gpio;
+static int npi_down_gpio_en;
+
 
 static char npi_down_status[4]={0};
 
@@ -26,27 +28,8 @@ int npi_down_status_detect(void)
 
 /* remove gpio_request and gpio_free,GPIO69 is used by usb_otg and npi down status,
 so gpio_request will fail here, we not request and get gpio status directly*/
-	#if REQUEST_NPI_DOWN_GPIO
-	int rc = 0;
-	rc = gpio_request(npi_down_gpio, "npi down status");
-
-		if (rc) {
-			pr_err("npi down status request gpio=%d failed, rc=%d\n", npi_down_gpio,rc);
-			goto err_gpio;
-		}
-
-		rc = gpio_direction_input(npi_down_gpio);
-		if (rc) {
-			pr_err("set_direction for gpio=%d failed, rc=%d\n",npi_down_gpio,rc);
-			goto err_gpio;
-		}
-	#endif
 
 		status=gpio_get_value(npi_down_gpio);
-
-	#if REQUEST_NPI_DOWN_GPIO
-		gpio_free(npi_down_gpio);
-	#endif
 
 		if(status)
 		strcpy(npi_down_status,"1");
@@ -55,13 +38,6 @@ so gpio_request will fail here, we not request and get gpio status directly*/
 
 		return 0;
 
-
-	#if REQUEST_NPI_DOWN_GPIO
-	err_gpio:
-			gpio_free(npi_down_gpio);
-		return  -ENODEV;
-	#endif
-
 }
 
 
@@ -69,15 +45,26 @@ static ssize_t npi_down_status_read(struct class *class,
 				struct class_attribute *attr, char *buf)
 {
 	int err;
-
+	
+	int rc = 0;
+	
 	err = pinctrl_select_state(pinctrl, pin_default);
 	if (err) {
 		pr_err("npi_down_status: Can't select pinctrl state\n");
 		return err;
 	}
-
+		rc = gpio_direction_output(npi_down_gpio_en,1);
+		if (rc) {
+			pr_err("set_direction for gpio=%d failed, rc=%d\n",npi_down_gpio_en,rc);
+		}
+			
 	err=npi_down_status_detect();
 
+		rc = gpio_direction_output(npi_down_gpio_en,0);
+		if (rc) {
+			pr_err("set_direction for gpio=%d failed, rc=%d\n",npi_down_gpio_en,rc);
+				}
+	
 	err = pinctrl_select_state(pinctrl, pin_suspend);
 	if (err) {
 		pr_err("npi_down_status: Can't select pinctrl state\n");
@@ -146,9 +133,43 @@ static int npi_down_status_probe(struct platform_device *pdev)
 	npi_down_gpio=of_get_named_gpio(pdev->dev.of_node,
 		"qcom,npi-down-gpio", 0);
 
-	rc=npi_down_status_creat_file();
+	npi_down_gpio_en=of_get_named_gpio(pdev->dev.of_node,
+			"qcom,npi-down-en-pin", 0);
 
+	rc = gpio_request(npi_down_gpio, "npi down status");
+		if (rc) {
+			pr_err("npi down status request gpio=%d failed, rc=%d\n", npi_down_gpio,rc);
+			goto err_gpio;
+		}
+
+	rc = gpio_direction_input(npi_down_gpio);
+	if (rc) {
+	      pr_err("set_direction for gpio=%d failed, rc=%d\n",npi_down_gpio,rc);
+			goto err_gpio;
+		}
+		
+	rc = gpio_request(npi_down_gpio_en, "npi down en status");
+	if (rc) {
+			pr_err("npi down status request gpio=%d failed, rc=%d\n", npi_down_gpio_en,rc);
+			goto err_gpio;
+		}
+
+		
+	rc = gpio_direction_output(npi_down_gpio_en,0);
+			if (rc) {
+				pr_err("set_direction for gpio=%d failed, rc=%d\n",npi_down_gpio_en,rc);
+				goto err_gpio;
+			}
+
+	rc=npi_down_status_creat_file();
+	
+	
 	return rc;
+	
+	err_gpio:
+	  gpio_free(npi_down_gpio);
+	  return  -ENODEV;
+	  
 }
 
 
@@ -156,6 +177,8 @@ static int npi_down_status_remove(struct platform_device *pdev)
 {
 	#if REQUEST_NPI_DOWN_GPIO
 	gpio_free(npi_down_gpio);
+	
+	gpio_free(npi_down_gpio_en);
 	#endif
 
 	return 0;

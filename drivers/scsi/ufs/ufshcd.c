@@ -52,6 +52,11 @@
 #include "ufs_bsg.h"
 #include "ufshcd-crypto.h"
 
+#ifdef CONFIG_EMKIT_INFO
+#include <emkit/emkit_info.h>
+#endif
+
+
 #define CREATE_TRACE_POINTS
 #include <trace/events/ufs.h>
 
@@ -7425,7 +7430,12 @@ static int ufs_get_device_desc(struct ufs_hba *hba)
 			__func__, err);
 		goto out;
 	}
-
+	
+	
+	#ifdef CONFIG_EMKIT_INFO
+  		SetModuleName(MODULE_MEMORY, dev_info->model, __FUNCTION__);
+  	#endif
+	
 	ufshcd_get_ref_clk_gating_wait(hba);
 
 	ufs_fixup_device_setup(hba);

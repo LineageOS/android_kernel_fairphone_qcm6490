@@ -140,11 +140,11 @@ static int sde_backlight_device_update_status(struct backlight_device *bd)
 		if(brightness <= 0){
 			bl_lvl = 0;
 		} else if(brightness >= 1 && brightness <= 11){
-			bl_lvl = (int)(10 * brightness - 6);
+			bl_lvl = (int)(9.7 * brightness - 5.7);
 		} else if(brightness > 11 && brightness <= 30){
-			bl_lvl = (int)(15.7 * brightness - 70);
+			bl_lvl = (int)(10.5 * brightness - 14);
 		} else if(brightness > 30 && brightness <= 2047){
-			bl_lvl = (int)(1.54 * brightness + 363);
+			bl_lvl = (int)(1.59 * brightness + 260);
 		} else {
 			bl_lvl = (int)(0.28 * brightness + 2948);
 		}

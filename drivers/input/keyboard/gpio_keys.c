@@ -985,7 +985,7 @@ static ssize_t class_hall_sensor_status_show(struct device *dev,
 	return sprintf(buf, "%s\n", state ? "Close" : "Open");
 
 }
-static DEVICE_ATTR(hall_status, 0644, class_hall_sensor_status_show, NULL);
+static DEVICE_ATTR(hall_status, 0444, class_hall_sensor_status_show, NULL);
 
 static void hall_sensor_init(struct device *dev)
 {

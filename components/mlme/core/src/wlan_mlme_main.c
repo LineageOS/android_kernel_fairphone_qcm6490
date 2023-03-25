@@ -667,6 +667,8 @@ mlme_init_qos_edca_params(struct wlan_objmgr_psoc *psoc,
 	edca_params->enable_edca_params =
 			cfg_get(psoc, CFG_EDCA_ENABLE_PARAM);
 
+	edca_params->enable_wmm_txop =
+			cfg_get(psoc, CFG_ENABLE_WMM_TXOP);
 	edca_params->edca_ac_vo.vo_cwmin =
 			cfg_get(psoc, CFG_EDCA_VO_CWMIN);
 	edca_params->edca_ac_vo.vo_cwmax =
@@ -1820,6 +1822,7 @@ static void mlme_init_lfr_cfg(struct wlan_objmgr_psoc *psoc,
 	lfr->roam_preauth_retry_count =
 		cfg_get(psoc, CFG_LFR3_ROAM_PREAUTH_RETRY_COUNT);
 	lfr->roam_rssi_diff = cfg_get(psoc, CFG_LFR_ROAM_RSSI_DIFF);
+	lfr->roam_rssi_diff_6ghz = cfg_get(psoc, CFG_LFR_ROAM_RSSI_DIFF_6GHZ);
 	lfr->bg_rssi_threshold = cfg_get(psoc, CFG_LFR_ROAM_BG_RSSI_TH);
 	lfr->roam_scan_offload_enabled =
 		cfg_get(psoc, CFG_LFR_ROAM_SCAN_OFFLOAD_ENABLED);

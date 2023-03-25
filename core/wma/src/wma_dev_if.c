@@ -1249,6 +1249,8 @@ QDF_STATUS wma_vdev_start_resp_handler(struct vdev_mlme_obj *vdev_mlme,
 		return QDF_STATUS_E_INVAL;
 
 	mlme_obj->mgmt.generic.tx_pwrlimit = rsp->max_allowed_tx_power;
+	wma_debug("Max allowed tx power: %d", rsp->max_allowed_tx_power);
+
 	if (iface->type == WMI_VDEV_TYPE_STA)
 		assoc_type = mlme_get_assoc_type(vdev_mlme->vdev);
 
@@ -2537,6 +2539,16 @@ QDF_STATUS wma_post_vdev_create_setup(struct wlan_objmgr_vdev *vdev)
 			wma_err("failed to set sw retry threshold per ac(status = %d)",
 				 status);
 	}
+
+	wma_debug("Setting WMI_VDEV_PARAM_WMM_TXOP_ENABLE: %d",
+		  mac->mlme_cfg->edca_params.enable_wmm_txop);
+
+	status  = wma_vdev_set_param(wma_handle->wmi_handle, vdev_id,
+				WMI_VDEV_PARAM_WMM_TXOP_ENABLE,
+				mac->mlme_cfg->edca_params.enable_wmm_txop);
+
+	if (QDF_IS_STATUS_ERROR(status))
+		wma_err("failed to set WMM TXOP (status = %d)", status);
 
 	wma_debug("Setting WMI_VDEV_PARAM_DISCONNECT_TH: %d",
 		 mac->mlme_cfg->gen.dropped_pkt_disconnect_thresh);

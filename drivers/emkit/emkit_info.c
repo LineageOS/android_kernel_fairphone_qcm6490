@@ -175,12 +175,23 @@ static ssize_t name##_store(struct kobject *kobj, struct kobj_attribute *attr, c
 INFO_FUNC(g_emkit_info.board_module_name[MODULE_CPU], emkit_cpu);
 INFO_FUNC(g_emkit_info.board_module_name[MODULE_MEMORY], emkit_memory);
 
-
+INFO_FUNC(g_emkit_info.board_module_name[MODULE_ACCELERATION], acceleration);
+INFO_FUNC(g_emkit_info.board_module_name[MODULE_GYROSCOPE], gyroscope);
+INFO_FUNC(g_emkit_info.board_module_name[MODULE_LIGHT], light);
+INFO_FUNC(g_emkit_info.board_module_name[MODULE_MAGNETIC], magnetic);
+INFO_FUNC(g_emkit_info.board_module_name[MODULE_PROXIMITY], proximity);
+INFO_FUNC(g_emkit_info.board_module_name[MODULE_PRESSURE], pressure);
 
 
 static struct kobj_attribute emkit_attrs[] = {
     __ATTR(emkit_cpu, S_IRUGO|S_IWUSR|S_IWGRP, emkit_cpu_show, emkit_cpu_store),
     __ATTR(emkit_memory, S_IRUGO|S_IWUSR|S_IWGRP, emkit_memory_show, emkit_memory_store),
+    __ATTR(acceleration, S_IRUGO|S_IWUSR|S_IWGRP, acceleration_show, acceleration_store),
+    __ATTR(gyroscope, S_IRUGO|S_IWUSR|S_IWGRP, gyroscope_show, gyroscope_store),
+    __ATTR(light, S_IRUGO|S_IWUSR|S_IWGRP, light_show, light_store),
+    __ATTR(magnetic, S_IRUGO|S_IWUSR|S_IWGRP, magnetic_show, magnetic_store),
+    __ATTR(proximity, S_IRUGO|S_IWUSR|S_IWGRP, proximity_show, proximity_store), 
+    __ATTR(pressure, S_IRUGO|S_IWUSR|S_IWGRP, pressure_show, pressure_store), 
 };
 
 #define EMKIT_ATTRS_NUM (sizeof(emkit_attrs) / sizeof(emkit_attrs[0]))

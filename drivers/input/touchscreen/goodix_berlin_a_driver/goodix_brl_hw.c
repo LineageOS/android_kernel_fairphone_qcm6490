@@ -249,6 +249,8 @@ ts_err("zmw---brl_power_on---111");
 		usleep_range(15000, 15100);
 		gpio_direction_output(reset_gpio, 1);
 		usleep_range(4000, 4100);
+		msleep(GOODIX_NORMAL_RESET_DELAY_MS);	
+			
 		ret = brl_dev_confirm(cd);
 ts_err("zmw---brl_power_on---333");		
 		if (ret < 0)

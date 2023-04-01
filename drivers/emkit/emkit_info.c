@@ -181,11 +181,15 @@ INFO_FUNC(g_emkit_info.board_module_name[MODULE_LIGHT], light);
 INFO_FUNC(g_emkit_info.board_module_name[MODULE_MAGNETIC], magnetic);
 INFO_FUNC(g_emkit_info.board_module_name[MODULE_PROXIMITY], proximity);
 INFO_FUNC(g_emkit_info.board_module_name[MODULE_PRESSURE], pressure);
+INFO_FUNC(g_emkit_info.board_module_name[MODULE_MEMORY_VENDOR], emkit_memory_vendor);
+
 
 
 static struct kobj_attribute emkit_attrs[] = {
     __ATTR(emkit_cpu, S_IRUGO|S_IWUSR|S_IWGRP, emkit_cpu_show, emkit_cpu_store),
     __ATTR(emkit_memory, S_IRUGO|S_IWUSR|S_IWGRP, emkit_memory_show, emkit_memory_store),
+	__ATTR(emkit_memory_vendor, S_IRUGO|S_IWUSR|S_IWGRP, emkit_memory_vendor_show, emkit_memory_vendor_store),
+	
     __ATTR(acceleration, S_IRUGO|S_IWUSR|S_IWGRP, acceleration_show, acceleration_store),
     __ATTR(gyroscope, S_IRUGO|S_IWUSR|S_IWGRP, gyroscope_show, gyroscope_store),
     __ATTR(light, S_IRUGO|S_IWUSR|S_IWGRP, light_show, light_store),
@@ -223,23 +227,6 @@ static int emkit_info_probe(struct platform_device * pdev)
 			goto err_create_sysfs;
         }
     }
-
-
-    /*{
-        int major;
-        struct class *cls;
-        struct device *devfs;
-        major = register_chrdev(0, "emkit-info", &features_fops);
-        if (major) {
-            cls = class_create(THIS_MODULE, "emkit-info");
-            if (!IS_ERR(cls)) {
-                devfs = device_create(cls, NULL, MKDEV(major, 0), NULL, "emkit-info");
-                if (IS_ERR(devfs)) {
-                    EMLOG("##ZEUS## device_create() failed.");
-                }
-            }
-        }
-    }*/
 
 	
 	board_check_cpu();

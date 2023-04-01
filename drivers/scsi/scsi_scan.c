@@ -50,6 +50,13 @@
 #include "scsi_priv.h"
 #include "scsi_logging.h"
 
+#ifdef CONFIG_EMKIT_INFO
+#include <emkit/emkit_info.h>
+#endif
+
+
+
+
 #define ALLOC_FAILURE_MSG	KERN_ERR "%s: Allocation failure during" \
 	" SCSI scanning, some SCSI devices might not be configured\n"
 
@@ -870,6 +877,17 @@ static int scsi_add_lun(struct scsi_device *sdev, unsigned char *inq_result,
 			sdev->vendor, sdev->model, sdev->rev,
 			sdev->inq_periph_qual, inq_result[2] & 0x07,
 			(inq_result[3] & 0x0f) == 1 ? " CCS" : "");
+
+	#ifdef CONFIG_EMKIT_INFO
+		{
+			char  vendor[256];
+			sscanf(sdev->vendor,"%s",vendor);
+			SetModuleName(MODULE_MEMORY_VENDOR, vendor, __FUNCTION__);
+		}
+	#endif
+
+	
+
 
 	if ((sdev->scsi_level >= SCSI_2) && (inq_result[7] & 2) &&
 	    !(*bflags & BLIST_NOTQ)) {

@@ -117,6 +117,7 @@ enum usb_property_id {
 	USB_TYPEC_COMPLIANT,
 	USB_SCOPE,
 	USB_TYPEC_CC_ORIENTATION,/*zxzcc add for typec cc orientation*/
+	USB_USER_INPUT_CURR, /*Add by T2M.zhangxianzhu for setting usb_icl by AP, zxzicl*/
 	USB_CONNECTOR_TYPE,
 	USB_PROP_MAX,
 };
@@ -300,6 +301,7 @@ static const int usb_prop_map[USB_PROP_MAX] = {
 	[USB_TEMP]		= POWER_SUPPLY_PROP_TEMP,
 	[USB_SCOPE]		= POWER_SUPPLY_PROP_SCOPE,
 	[USB_TYPEC_CC_ORIENTATION]		= POWER_SUPPLY_PROP_TYPEC_CC_ORIENTATION,/*zxzcc add for typec cc orientation*/
+	[USB_USER_INPUT_CURR] = POWER_SUPPLY_PROP_USER_INPUT_CURRENT, /*Add by T2M.zhangxianzhu for setting usb_icl by AP, zxzicl*/
 };
 
 static const int wls_prop_map[WLS_PROP_MAX] = {
@@ -979,6 +981,7 @@ static int usb_psy_set_prop(struct power_supply *psy,
 		return prop_id;
 
 	switch (prop) {
+    case POWER_SUPPLY_PROP_USER_INPUT_CURRENT: /*Add by T2M.zhangxianzhu for setting usb_icl by AP, zxzicl*/
 	case POWER_SUPPLY_PROP_INPUT_CURRENT_LIMIT:
 		rc = usb_psy_set_icl(bcdev, prop_id, pval->intval);
 		break;
@@ -993,6 +996,7 @@ static int usb_psy_prop_is_writeable(struct power_supply *psy,
 		enum power_supply_property prop)
 {
 	switch (prop) {
+	case POWER_SUPPLY_PROP_USER_INPUT_CURRENT: /*Add by T2M.zhangxianzhu for setting usb_icl by AP, zxzicl*/
 	case POWER_SUPPLY_PROP_INPUT_CURRENT_LIMIT:
 		return 1;
 	default:
@@ -1013,6 +1017,7 @@ static enum power_supply_property usb_props[] = {
 	POWER_SUPPLY_PROP_TEMP,
 	POWER_SUPPLY_PROP_SCOPE,
 	POWER_SUPPLY_PROP_TYPEC_CC_ORIENTATION,/*zxzcc add for typec cc orientation*/
+	POWER_SUPPLY_PROP_USER_INPUT_CURRENT,/*Add by T2M.zhangxianzhu for setting usb_icl by AP, zxzicl*/
 };
 
 static enum power_supply_usb_type usb_psy_supported_types[] = {

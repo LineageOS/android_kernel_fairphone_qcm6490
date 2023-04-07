@@ -8405,7 +8405,7 @@ int dsi_display_enable(struct dsi_display *display)
 
 		display->panel->panel_initialized = true;
 #if defined(CONFIG_PXLW_IRIS)
-    iris_send_cont_splash(IRIS_CONT_SPLASH_VIDEO_BYPASS);
+    iris_send_cont_splash(IRIS_CONT_SPLASH_BYPASS);
 #endif
 		DSI_DEBUG("cont splash enabled, display enable not required\n");
 		dsi_display_panel_id_notification(display);

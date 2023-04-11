@@ -157,6 +157,7 @@ static struct power_supply_attr power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(POWER_NOW),
 	POWER_SUPPLY_ATTR(POWER_AVG),
 	POWER_SUPPLY_ATTR(RESISTANCE_ID), /* zxzid add for battery resistance id */
+	POWER_SUPPLY_ATTR(USER_FCC), /*Add by T2M.zhangxianzhu for setting FCC by AP, zxzfcc*/
 	POWER_SUPPLY_ATTR(CHARGE_FULL_DESIGN),
 	POWER_SUPPLY_ATTR(CHARGE_EMPTY_DESIGN),
 	POWER_SUPPLY_ATTR(CHARGE_FULL),

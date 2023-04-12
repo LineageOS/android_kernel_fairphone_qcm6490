@@ -132,6 +132,7 @@ static int dsi_panel_gpio_request(struct dsi_panel *panel)
 		}
 	}
 
+/*Add by T2M-mingwu.zhang for FP5-129 remarks: AMOLED Power sequence optimization.[Begin]*/
 	if (gpio_is_valid(r_config->disp_1v2_off_gpio)) {
 		rc = gpio_request(r_config->disp_1v2_off_gpio, "disp_1v2_off_gpio");
 		if (rc) {
@@ -139,6 +140,15 @@ static int dsi_panel_gpio_request(struct dsi_panel *panel)
 			goto error_release_reset;
 		}
 	}	
+
+	if (gpio_is_valid(r_config->disp_3v0_off_gpio)) {
+		rc = gpio_request(r_config->disp_3v0_off_gpio, "disp_3v0_off_gpio");
+		if (rc) {
+			DSI_ERR("request for disp_3v0_off_gpio failed, rc=%d\n", rc);
+			goto error_release_reset;
+		}
+	}
+/*Add by T2M-mingwu.zhang [End]*/
 
 	if (gpio_is_valid(panel->bl_config.en_gpio)) {
 		rc = gpio_request(panel->bl_config.en_gpio, "bklt_en_gpio");
@@ -177,8 +187,12 @@ error_release_mode_sel:
 error_release_disp_en:
 	if (gpio_is_valid(r_config->disp_en_gpio))
 		gpio_free(r_config->disp_en_gpio);
+/*Add by T2M-mingwu.zhang for FP5-129 remarks: AMOLED Power sequence optimization.[Begin]*/		
 	if (gpio_is_valid(r_config->disp_1v2_off_gpio))
-		gpio_free(r_config->disp_1v2_off_gpio);		
+		gpio_free(r_config->disp_1v2_off_gpio);
+	if (gpio_is_valid(r_config->disp_3v0_off_gpio))
+		gpio_free(r_config->disp_3v0_off_gpio);
+/*Add by T2M-mingwu.zhang [End]*/						
 error_release_reset:
 	if (gpio_is_valid(r_config->reset_gpio))
 		gpio_free(r_config->reset_gpio);
@@ -197,8 +211,13 @@ static int dsi_panel_gpio_release(struct dsi_panel *panel)
 	if (gpio_is_valid(r_config->disp_en_gpio))
 		gpio_free(r_config->disp_en_gpio);
 
+/*Add by T2M-mingwu.zhang for FP5-129 remarks: AMOLED Power sequence optimization.[Begin]*/
 	if (gpio_is_valid(r_config->disp_1v2_off_gpio))
 		gpio_free(r_config->disp_1v2_off_gpio);
+
+	if (gpio_is_valid(r_config->disp_3v0_off_gpio))
+		gpio_free(r_config->disp_3v0_off_gpio);		
+/*Add by T2M-mingwu.zhang [End]*/
 
 	if (gpio_is_valid(panel->bl_config.en_gpio))
 		gpio_free(panel->bl_config.en_gpio);
@@ -273,6 +292,8 @@ static int dsi_panel_reset(struct dsi_panel *panel)
 			goto exit;
 		}
 	}
+
+/*Add by T2M-mingwu.zhang for FP5-129 remarks: AMOLED Power sequence optimization.[Begin]*/
 	if (gpio_is_valid(panel->reset_config.disp_1v2_off_gpio)) {
 		rc = gpio_direction_output(panel->reset_config.disp_1v2_off_gpio, 1);
 		if (rc) {
@@ -280,6 +301,17 @@ static int dsi_panel_reset(struct dsi_panel *panel)
 			goto exit;
 		}
 	}
+
+	usleep_range(5*1000, 5*1100);
+	DSI_ERR("zmw:name=[%s] line=[%d] usleep5000 \n",__func__,__LINE__);
+	if (gpio_is_valid(panel->reset_config.disp_3v0_off_gpio)) {
+		rc = gpio_direction_output(panel->reset_config.disp_3v0_off_gpio, 1);
+		if (rc) {
+			DSI_ERR("unable to set dir for disp gpio rc=%d\n", rc);
+			goto exit;
+		}
+	}	
+/*Add by T2M-mingwu.zhang [End]*/
 
 	if (r_config->count) {
 		rc = gpio_direction_output(r_config->reset_gpio,
@@ -404,10 +436,13 @@ static int dsi_panel_power_on(struct dsi_panel *panel)
 error_disable_gpio:
 	if (gpio_is_valid(panel->reset_config.disp_en_gpio))
 		gpio_set_value(panel->reset_config.disp_en_gpio, 0);
-
+/*Add by T2M-mingwu.zhang for FP5-129 remarks: AMOLED Power sequence optimization.[Begin]*/
 	if (gpio_is_valid(panel->reset_config.disp_1v2_off_gpio))
 		gpio_set_value(panel->reset_config.disp_1v2_off_gpio, 0);
 
+	if (gpio_is_valid(panel->reset_config.disp_3v0_off_gpio))
+		gpio_set_value(panel->reset_config.disp_3v0_off_gpio, 0);
+/*Add by T2M-mingwu.zhang [End]*/
 	if (gpio_is_valid(panel->bl_config.en_gpio))
 		gpio_set_value(panel->bl_config.en_gpio, 0);
 
@@ -430,13 +465,21 @@ static int dsi_panel_power_off(struct dsi_panel *panel)
 	}
 	if (gpio_is_valid(panel->reset_config.disp_en_gpio))
 		gpio_set_value(panel->reset_config.disp_en_gpio, 0);
-
-	if (gpio_is_valid(panel->reset_config.disp_1v2_off_gpio))
-		gpio_set_value(panel->reset_config.disp_1v2_off_gpio, 0);	
-
+	
+/*Add by T2M-mingwu.zhang for FP5-129 remarks: AMOLED Power sequence optimization.[Begin]*/
 	if (gpio_is_valid(panel->reset_config.reset_gpio) &&
 					!panel->reset_gpio_always_on)
 		gpio_set_value(panel->reset_config.reset_gpio, 0);
+
+	usleep_range(50*1000, 50*1100);
+	if (gpio_is_valid(panel->reset_config.disp_3v0_off_gpio))
+		gpio_set_value(panel->reset_config.disp_3v0_off_gpio, 0);
+
+	usleep_range(5*1000, 5*1100);
+	DSI_ERR("zmw:name=[%s] line=[%d] usleep5000 \n",__func__,__LINE__);
+	if (gpio_is_valid(panel->reset_config.disp_1v2_off_gpio))
+		gpio_set_value(panel->reset_config.disp_1v2_off_gpio, 0);
+/*Add by T2M-mingwu.zhang [End]*/
 
 #if defined(CONFIG_PXLW_IRIS)
 	iris_reset_off();
@@ -2320,6 +2363,7 @@ static int dsi_panel_parse_gpios(struct dsi_panel *panel)
 		}
 	}
 
+/*Add by T2M-mingwu.zhang for FP5-129 remarks: AMOLED Power sequence optimization.[Begin]*/
 	panel->reset_config.disp_1v2_off_gpio =
 			utils->get_named_gpio(utils->data,
 				"qcom,platform-dvdd-off-gpio", 0);
@@ -2327,6 +2371,15 @@ static int dsi_panel_parse_gpios(struct dsi_panel *panel)
 		DSI_DEBUG("[%s] platform-1v2-off-gpio is not set, rc=%d\n",
 				panel->name, rc);
 	}
+
+	panel->reset_config.disp_3v0_off_gpio =
+			utils->get_named_gpio(utils->data,
+				"qcom,platform-vci-off-gpio", 0);
+	if (!gpio_is_valid(panel->reset_config.disp_3v0_off_gpio)) {
+		DSI_DEBUG("[%s] platform-3v0-off-gpio is not set, rc=%d\n",
+				panel->name, rc);
+	}	
+/*Add by T2M-mingwu.zhang [End]*/
 
 	panel->reset_config.lcd_mode_sel_gpio = utils->get_named_gpio(
 		utils->data, mode_set_gpio_name, 0);

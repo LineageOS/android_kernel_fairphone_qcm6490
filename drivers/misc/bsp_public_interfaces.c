@@ -143,10 +143,12 @@ static int board_check_hwid(struct board_platform_data *pdata)
                         (pdata->id0_val << 0);
 
 	if (pdata->hw_version == 0) {
-		strcpy(pdata->board_version,"DVT1");
+		strcpy(pdata->board_version,"EVT");
 	} else if (pdata->hw_version == 1) {
-		strcpy(pdata->board_version,"DVT2");
+		strcpy(pdata->board_version,"DVT1");
 	} else if (pdata->hw_version == 2) {
+		strcpy(pdata->board_version,"DVT2");
+	} else if (pdata->hw_version == 3) {
 		strcpy(pdata->board_version,"MVT");
 	} else {
 		strcpy(pdata->board_version,"UNKNOWN");

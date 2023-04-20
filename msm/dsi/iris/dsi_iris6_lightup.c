@@ -3388,7 +3388,9 @@ static void _iris_send_cont_splash_pkt(uint32_t type)
 			_iris_pre_lightup(pcfg->panel);
 			_iris_send_lightup_pkt();
 			iris_lp_enable_post();
-			iris_abyp_switch_proc(pcfg->display, IRIS_ABYP_MODE, true);
+			if ((iris_lightup_opt_get() & 0x10) == 0) {
+				iris_abyp_switch_proc(pcfg->display, IRIS_ABYP_MODE, true);
+			}
 		}
 		pcfg->cont_splash_status = 1;
 	} else if (type == IRIS_CONT_SPLASH_VIDEO_BYPASS) {

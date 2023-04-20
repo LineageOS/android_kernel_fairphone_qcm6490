@@ -243,7 +243,7 @@ static int _iris_configure(u32 type, u32 value)
 		return -EPERM;
 
 	if (!_iris_special_config(type)) {
-		IRIS_LOGW("%s type: %d status:%d!", __func__, type, pcfg->valid);
+		IRIS_LOGW("%s type: %d valid:%d mode: %d!", __func__, type, pcfg->valid, iris_get_abyp_mode_blocking());
 		return -EPERM;
 	}
 
@@ -1162,7 +1162,7 @@ int iris_operate_conf(struct msm_iris_operate_value *argp)
 	}
 
 	if (IRIS_CHIP_VERSION != child_type && pcfg->cont_splash_status == 0) {
-		IRIS_LOGE("%s(), splash not complete:%d", __func__, pcfg->cont_splash_status);
+		IRIS_LOGE("%s(), type: %d splash not complete:%d", __func__, child_type, pcfg->cont_splash_status);
 		return -EPERM;
 	}
 

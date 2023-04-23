@@ -55,7 +55,7 @@ static ssize_t gsx_double_type_show(struct goodix_ext_module *module,
 		char *buf)
 {
 	struct gesture_module *gsx = module->priv_data;
-	unsigned char type;
+	u32 type;
 
 	if (!gsx)
 		return -EIO;
@@ -100,7 +100,7 @@ static ssize_t gsx_single_type_show(struct goodix_ext_module *module,
 		char *buf)
 {
 	struct gesture_module *gsx = module->priv_data;
-	unsigned char type;
+	u32 type;
 
 	if (!gsx)
 		return -EIO;
@@ -145,7 +145,7 @@ static ssize_t gsx_fod_type_show(struct goodix_ext_module *module,
 		char *buf)
 {
 	struct gesture_module *gsx = module->priv_data;
-	unsigned char type;
+	u32 type;
 
 	if (!gsx)
 		return -EIO;

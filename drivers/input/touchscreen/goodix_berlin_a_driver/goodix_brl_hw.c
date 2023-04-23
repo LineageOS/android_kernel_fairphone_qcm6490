@@ -83,6 +83,10 @@ static int brl_dev_confirm(struct goodix_ts_core *cd)
 	u8 rx_buf[8] = {0};
 	u8 i =0;
 
+/*Add by T2M-mingwu.zhang for FP5-195 remarks: Double click on driver update.[Begin]*/	
+return ret;
+/*Add by T2M-mingwu.zhang [End]*/
+
 	if (cd->bus->ic_type == IC_TYPE_BERLIN_A &&
 			cd->bus->bus_type == GOODIX_BUS_TYPE_SPI)
 		return brl_select_spi_mode(cd);
@@ -128,9 +132,11 @@ static int brl_reset_after(struct goodix_ts_core *cd)
 	ts_info("IN");
 
 	/* select spi mode */
-/* 	ret = brl_select_spi_mode(cd);
+/*Add by T2M-mingwu.zhang for FP5-195 remarks: Double click on driver update.[Begin]*/	
+	ret = brl_select_spi_mode(cd);
 	if (ret < 0)
-		return ret; */
+		return ret;
+/*Add by T2M-mingwu.zhang [End]*/
 
 	/* hold cpu */
 	retry = GOODIX_RETRY_10;
@@ -295,13 +301,15 @@ int brl_resume(struct goodix_ts_core *cd)
 int brl_gesture(struct goodix_ts_core *cd, int gesture_type)
 {
 	struct goodix_ts_cmd cmd;
+	u32 type = ~(cd->gesture_type);
 
 	if (cd->bus->ic_type == IC_TYPE_BERLIN_A)
 		cmd.cmd = GOODIX_GESTURE_CMD_BA;
 	else
 		cmd.cmd = GOODIX_GESTURE_CMD;
-	cmd.len = 5;
-	cmd.data[0] = gesture_type;
+	cmd.len = 6;
+	cmd.data[0] = type & 0xFF;
+	cmd.data[1] = (type >> 8) & 0xFF;
 	if (cd->hw_ops->send_cmd(cd, &cmd))
 		ts_err("failed send gesture cmd");
 
@@ -1251,71 +1259,42 @@ static int brl_esd_check(struct goodix_ts_core *cd)
 
 #define IRQ_EVENT_HEAD_LEN			8
 #define BYTES_PER_POINT				8
-#define COOR_DATA_CHECKSUM_SIZE		2
+#define BYTES_STYLUS_LEN			16
+#define IRQ_EVENT_MAX_SIZE 			106
 
 #define GOODIX_TOUCH_EVENT			0x80
 #define GOODIX_REQUEST_EVENT		0x40
 #define GOODIX_GESTURE_EVENT		0x20
 #define GOODIX_FP_EVENT				0x08
-#define POINT_TYPE_STYLUS_HOVER		0x01
-#define POINT_TYPE_STYLUS			0x03
 
 static void goodix_parse_finger(struct goodix_touch_data *touch_data,
-				u8 *buf, int touch_num)
+				u8 *buf, int id)
 {
-	unsigned int id = 0, x = 0, y = 0, w = 0;
-	u8 *coor_data;
-	int i;
-
-	coor_data = &buf[IRQ_EVENT_HEAD_LEN];
-	for (i = 0; i < touch_num; i++) {
-		id = (coor_data[0] >> 4) & 0x0F;
-		if (id >= GOODIX_MAX_TOUCH) {
-			ts_info("invalid finger id =%d", id);
-			touch_data->touch_num = 0;
-			return;
-		}
-		x = le16_to_cpup((__le16 *)(coor_data + 2));
-		y = le16_to_cpup((__le16 *)(coor_data + 4));
-		w = le16_to_cpup((__le16 *)(coor_data + 6));
-		touch_data->coords[id].status = TS_TOUCH;
-		touch_data->coords[id].x = x;
-		touch_data->coords[id].y = y;
-		touch_data->coords[id].w = w;
-		coor_data += BYTES_PER_POINT;
-	}
-	touch_data->touch_num = touch_num;
+	touch_data->coords[id].status = TS_TOUCH;
+	touch_data->coords[id].x = le16_to_cpup((__le16 *)(buf + 2));
+	touch_data->coords[id].y = le16_to_cpup((__le16 *)(buf + 4));
+	touch_data->coords[id].w = le16_to_cpup((__le16 *)(buf + 6));
+	touch_data->touch_num += 1;
 }
 
 static unsigned int goodix_pen_btn_code[] = {BTN_STYLUS, BTN_STYLUS2};
 static void goodix_parse_pen(struct goodix_pen_data *pen_data,
-	u8 *buf, int touch_num)
+				u8 *event_head, u8 *buf)
 {
-	unsigned int id = 0;
-	u8 cur_key_map = 0;
-	u8 *coor_data;
+	u8 cur_key_map;
 	int16_t x_angle, y_angle;
 	int i;
 
-	pen_data->coords.tool_type = BTN_TOOL_PEN;
+	pen_data->coords.status = TS_TOUCH;
+	pen_data->coords.x = le16_to_cpup((__le16 *)(buf + 2));
+	pen_data->coords.y = le16_to_cpup((__le16 *)(buf + 4));
+	pen_data->coords.p = le16_to_cpup((__le16 *)(buf + 6));
+	x_angle = le16_to_cpup((__le16 *)(buf + 8));
+	y_angle = le16_to_cpup((__le16 *)(buf + 10));
+	pen_data->coords.tilt_x = x_angle / 100;
+	pen_data->coords.tilt_y = y_angle / 100;
 
-	if (touch_num) {
-		pen_data->coords.status = TS_TOUCH;
-		coor_data = &buf[IRQ_EVENT_HEAD_LEN];
-
-		id = (coor_data[0] >> 4) & 0x0F;
-		pen_data->coords.x = le16_to_cpup((__le16 *)(coor_data + 2));
-		pen_data->coords.y = le16_to_cpup((__le16 *)(coor_data + 4));
-		pen_data->coords.p = le16_to_cpup((__le16 *)(coor_data + 6));
-		x_angle = le16_to_cpup((__le16 *)(coor_data + 8));
-		y_angle = le16_to_cpup((__le16 *)(coor_data + 10));
-		pen_data->coords.tilt_x = x_angle / 100;
-		pen_data->coords.tilt_y = y_angle / 100;
-	} else {
-		pen_data->coords.status = TS_RELEASE;
-	}
-
-	cur_key_map = (buf[3] & 0x0F) >> 1;
+	cur_key_map = (event_head[3] & 0x0F) >> 1;
 	for (i = 0; i < GOODIX_MAX_PEN_KEY; i++) {
 		pen_data->keys[i].code = goodix_pen_btn_code[i];
 		if (!(cur_key_map & (1 << i)))
@@ -1324,105 +1303,84 @@ static void goodix_parse_pen(struct goodix_pen_data *pen_data,
 	}
 }
 
+// TODO: confirm these touch key code.
+static unsigned int goodix_touch_btn_code[] = {
+	KEY_0, KEY_1, KEY_2, KEY_3, KEY_4,
+	KEY_5, KEY_6, KEY_7, KEY_8, KEY_9
+};
+static void goodix_parse_key(struct goodix_touch_data *touch_data,
+		u8 *buf)
+{
+	int i;
+	u32 key_map = ((buf[3] & 0x03) << 8) | buf[2];
+
+	touch_data->have_key = true;
+	for (i = 0; i < GOODIX_MAX_KEY; i++) {
+		touch_data->keys[i].code = goodix_touch_btn_code[i];
+		if (!(key_map & (1 << i)))
+			continue;
+		touch_data->keys[i].status = TS_TOUCH;
+	}
+	ts_debug("touch key:0x%06x", key_map);
+}
+
 static int goodix_touch_handler(struct goodix_ts_core *cd,
 				struct goodix_ts_event *ts_event,
-				u8 *pre_buf, u32 pre_buf_len)
+				u8 *buffer)
 {
-	struct goodix_ts_hw_ops *hw_ops = cd->hw_ops;
-	struct goodix_ic_info_misc *misc = &cd->ic_info.misc;
 	struct goodix_touch_data *touch_data = &ts_event->touch_data;
 	struct goodix_pen_data *pen_data = &ts_event->pen_data;
-	static u8 buffer[IRQ_EVENT_HEAD_LEN +
-			 BYTES_PER_POINT * GOODIX_MAX_TOUCH + 2];
+	int point_struct_len = cd->ic_info.misc.point_struct_len;
 	u8 touch_num = 0;
+	u8 *data;
+	u8 point_type;
+	int checksum_len = 0;
 	int ret = 0;
-	u8 point_type = 0;
-	static u8 pre_finger_num;
-	static u8 pre_pen_num;
-
-	/* copy pre-data to buffer */
-	memcpy(buffer, pre_buf, pre_buf_len);
+	int i;
+	int tid;
 
 	touch_num = buffer[2] & 0x0F;
 
-	if (touch_num > GOODIX_MAX_TOUCH) {
-		ts_debug("invalid touch num %d", touch_num);
-		return -EINVAL;
-	}
-
-	if (unlikely(touch_num > 2)) {
-		ret = hw_ops->read(cd,
-				misc->touch_data_addr + pre_buf_len,
-				&buffer[pre_buf_len],
-				(touch_num - 2) * BYTES_PER_POINT);
-		if (ret) {
-			ts_debug("failed get touch data");
-			return ret;
-		}
-	}
-
-	/* read done */
-	hw_ops->after_event_handler(cd);
-
 	if (touch_num > 0) {
-		point_type = buffer[IRQ_EVENT_HEAD_LEN] & 0x0F;
-		if (point_type == POINT_TYPE_STYLUS ||
-				point_type == POINT_TYPE_STYLUS_HOVER) {
-			ret = checksum_cmp(&buffer[IRQ_EVENT_HEAD_LEN],
-					BYTES_PER_POINT * 2 + 2,
-					CHECKSUM_MODE_U8_LE);
-			if (ret) {
-				ts_debug("touch data checksum error");
-				ts_debug("data:%*ph", BYTES_PER_POINT * 2 + 2,
-						&buffer[IRQ_EVENT_HEAD_LEN]);
-				return -EINVAL;
+		data = buffer + IRQ_EVENT_HEAD_LEN;
+		for (i = 0; i < touch_num; i++) {
+			point_type = data[0] & 0x0F;
+			tid = (data[0] >> 4) & 0x0F;
+			switch (point_type) {
+			case POINT_TYPE_STYLUS_HOVER:
+				pen_data->is_hover = true;
+			case POINT_TYPE_STYLUS:
+				goodix_parse_pen(pen_data, buffer, data);
+				checksum_len += BYTES_STYLUS_LEN;
+				data += BYTES_STYLUS_LEN;
+				break;
+			case POINT_TYPE_FINGER:
+				goodix_parse_finger(touch_data, data, tid);
+				checksum_len += point_struct_len;
+				data += point_struct_len;
+				break;
+			case POINT_TYPE_KEY:
+				goodix_parse_key(touch_data, data);
+				checksum_len += BYTES_PER_POINT;
+				data += BYTES_PER_POINT;
+				break;
+			case POINT_TYPE_GLOVE:
+				break;
+			default:
+				ts_debug("not support point type:%d", point_type);
+				break;
 			}
-		} else {
-			ret = checksum_cmp(&buffer[IRQ_EVENT_HEAD_LEN],
-					touch_num * BYTES_PER_POINT + 2,
+		}
+		ret = checksum_cmp(&buffer[IRQ_EVENT_HEAD_LEN],
+					checksum_len + 2,
 					CHECKSUM_MODE_U8_LE);
-			if (ret) {
-				ts_debug("touch data checksum error");
-				ts_debug("data:%*ph",
-						touch_num * BYTES_PER_POINT + 2,
-						&buffer[IRQ_EVENT_HEAD_LEN]);
-				return -EINVAL;
-			}
+		if (ret) {
+			ts_debug("touch data checksum error");
+			return -EINVAL;
 		}
 	}
 
-	ts_event->fp_flag = pre_buf[0] & GOODIX_FP_EVENT;
-
-	if (touch_num > 0 && (point_type == POINT_TYPE_STYLUS
-				|| point_type == POINT_TYPE_STYLUS_HOVER)) {
-		/* stylus info */
-		if (pre_finger_num) {
-			ts_event->event_type = EVENT_TOUCH;
-			goodix_parse_finger(touch_data, buffer, 0);
-			pre_finger_num = 0;
-		} else {
-			pre_pen_num = 1;
-			ts_event->event_type = EVENT_PEN;
-			goodix_parse_pen(pen_data, buffer, touch_num);
-		}
-	} else {
-		/* finger info */
-		if (pre_pen_num) {
-			ts_event->event_type = EVENT_PEN;
-			goodix_parse_pen(pen_data, buffer, 0);
-			pre_pen_num = 0;
-		} else {
-			ts_event->event_type = EVENT_TOUCH;
-			goodix_parse_finger(touch_data,
-					    buffer, touch_num);
-			pre_finger_num = touch_num;
-		}
-	}
-
-	/* process custom info */
-	if (buffer[3] & 0x01)
-		ts_debug("TODO add custom info process function");
-
+	ts_event->fp_flag = buffer[0] & GOODIX_FP_EVENT;
 	return 0;
 }
 
@@ -1431,17 +1389,14 @@ static int brl_event_handler(struct goodix_ts_core *cd,
 {
 	struct goodix_ts_hw_ops *hw_ops = cd->hw_ops;
 	struct goodix_ic_info_misc *misc = &cd->ic_info.misc;
-	int pre_read_len;
-	u8 pre_buf[32];
+	u8 pre_buf[IRQ_EVENT_MAX_SIZE];
 	u8 event_status;
 	int ret;
 
 	memset(ts_event, 0, sizeof(*ts_event));
 
-	pre_read_len = IRQ_EVENT_HEAD_LEN +
-		BYTES_PER_POINT * 2 + COOR_DATA_CHECKSUM_SIZE;
 	ret = hw_ops->read(cd, misc->touch_data_addr,
-			   pre_buf, pre_read_len);
+			   pre_buf, sizeof(pre_buf));
 	if (ret) {
 		ts_debug("failed get event head data");
 		return ret;
@@ -1452,6 +1407,9 @@ static int brl_event_handler(struct goodix_ts_core *cd,
 		return -EINVAL;
 	}
 
+	/* read done */
+	hw_ops->after_event_handler(cd);
+
 	if (checksum_cmp(pre_buf, IRQ_EVENT_HEAD_LEN, CHECKSUM_MODE_U8_LE)) {
 		ts_debug("touch head checksum err[%*ph]",
 				IRQ_EVENT_HEAD_LEN, pre_buf);
@@ -1459,12 +1417,17 @@ static int brl_event_handler(struct goodix_ts_core *cd,
 	}
 
 	event_status = pre_buf[0];
-	if (event_status & GOODIX_TOUCH_EVENT)
-		return goodix_touch_handler(cd, ts_event,
-					    pre_buf, pre_read_len);
+	if (event_status & GOODIX_TOUCH_EVENT) {
+		ret = goodix_touch_handler(cd, ts_event, pre_buf);
+		if (ret < 0)
+			return ret;
+		ts_event->event_type |= EVENT_TOUCH;
+		if (cd->board_data.pen_enable)
+			ts_event->event_type |= EVENT_PEN;
+	}
 
 	if (event_status & GOODIX_REQUEST_EVENT) {
-		ts_event->event_type = EVENT_REQUEST;
+		ts_event->event_type |= EVENT_REQUEST;
 		if (pre_buf[2] == BRL_REQUEST_CODE_CONFIG)
 			ts_event->request_code = REQUEST_TYPE_CONFIG;
 		else if (pre_buf[2] == BRL_REQUEST_CODE_RESET)
@@ -1474,13 +1437,11 @@ static int brl_event_handler(struct goodix_ts_core *cd,
 	}
 
 	if (event_status & GOODIX_GESTURE_EVENT) {
-		ts_event->event_type = EVENT_GESTURE;
+		ts_event->event_type |= EVENT_GESTURE;
 		ts_event->gesture_type = pre_buf[4];
 		memcpy(ts_event->gesture_data, &pre_buf[8],
 				GOODIX_GESTURE_DATA_LEN);
 	}
-	/* read done */
-	hw_ops->after_event_handler(cd);
 
 	return 0;
 }

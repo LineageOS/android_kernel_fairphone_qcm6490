@@ -1194,8 +1194,8 @@ static void goodix_ts_report_pen(struct input_dev *dev,
 	mutex_lock(&dev->mutex);
 
 	if (pen_data->coords.status == TS_TOUCH) {
-		input_report_key(dev, BTN_TOUCH, 1);
-		input_report_key(dev, pen_data->coords.tool_type, 1);
+		input_report_key(dev, BTN_TOUCH, pen_data->is_hover ? 0 : 1);
+		input_report_key(dev, BTN_TOOL_PEN, 1);
 		input_report_abs(dev, ABS_X, pen_data->coords.x);
 		input_report_abs(dev, ABS_Y, pen_data->coords.y);
 		input_report_abs(dev, ABS_PRESSURE, pen_data->coords.p);
@@ -1213,7 +1213,7 @@ static void goodix_ts_report_pen(struct input_dev *dev,
 				pen_data->keys[1].status == TS_TOUCH ? 1 : 0);
 	} else {
 		input_report_key(dev, BTN_TOUCH, 0);
-		input_report_key(dev, pen_data->coords.tool_type, 0);
+		input_report_key(dev, BTN_TOOL_PEN, 0);
 	}
 	/* report pen button */
 	for (i = 0; i < GOODIX_MAX_PEN_KEY; i++) {
@@ -1252,6 +1252,15 @@ static void goodix_ts_report_finger(struct input_dev *dev,
 		} else {
 			input_mt_slot(dev, i);
 			input_mt_report_slot_state(dev, MT_TOOL_FINGER, false);
+		}
+	}
+
+	if (touch_data->have_key) {
+		for (i = 0; i < GOODIX_MAX_KEY; i++) {
+			if (touch_data->keys[i].status == TS_TOUCH)
+				input_report_key(dev, touch_data->keys[i].code, 1);
+			else
+				input_report_key(dev, touch_data->keys[i].code, 0);
 		}
 	}
 
@@ -1322,17 +1331,17 @@ static irqreturn_t goodix_ts_threadirq_func(int irq, void *data)
 	/* read touch data from touch device */
 	ret = hw_ops->event_handler(core_data, ts_event);
 	if (likely(!ret)) {
-		if (ts_event->event_type == EVENT_TOUCH) {
+		if (ts_event->event_type & EVENT_TOUCH) {
 			/* report touch */
 			goodix_ts_report_finger(core_data->input_dev,
 					&ts_event->touch_data);
 		}
 		if (core_data->board_data.pen_enable &&
-				ts_event->event_type == EVENT_PEN) {
+				ts_event->event_type & EVENT_PEN) {
 			goodix_ts_report_pen(core_data->pen_dev,
 					&ts_event->pen_data);
 		}
-		if (ts_event->event_type == EVENT_REQUEST)
+		if (ts_event->event_type & EVENT_REQUEST)
 			goodix_ts_request_handle(core_data, ts_event);
 	}
 
@@ -1742,7 +1751,9 @@ static int goodix_esd_notifier_callback(struct notifier_block *nb,
 	case NOTIFY_FWUPDATE_START:
 	case NOTIFY_SUSPEND:
 ts_err("zmw---SUSPEND");	
-		goodix_ts_power_off(ts_esd->ts_core);
+/*Add by T2M-mingwu.zhang for FP5-195 remarks: Double click on driver update.[Begin]*/	
+//		goodix_ts_power_off(ts_esd->ts_core);
+/*Add by T2M-mingwu.zhang [End]*/
 		break;		
 	case NOTIFY_ESD_OFF:
 		goodix_ts_esd_off(ts_esd->ts_core);
@@ -1789,10 +1800,10 @@ int goodix_ts_esd_init(struct goodix_ts_core *cd)
 static void goodix_ts_release_connects(struct goodix_ts_core *core_data)
 {
 	struct input_dev *input_dev = core_data->input_dev;
+	struct input_dev *pen_dev = core_data->pen_dev;
 	int i;
 
 	mutex_lock(&input_dev->mutex);
-
 	for (i = 0; i < GOODIX_MAX_TOUCH; i++) {
 		input_mt_slot(input_dev, i);
 		input_mt_report_slot_state(input_dev,
@@ -1802,8 +1813,16 @@ static void goodix_ts_release_connects(struct goodix_ts_core *core_data)
 	input_report_key(input_dev, BTN_TOUCH, 0);
 	input_mt_sync_frame(input_dev);
 	input_sync(input_dev);
-
 	mutex_unlock(&input_dev->mutex);
+
+	if (core_data->board_data.pen_enable) {
+		mutex_lock(&pen_dev->mutex);
+		input_report_key(pen_dev, BTN_TOUCH, 0);
+		input_report_key(pen_dev, BTN_TOOL_PEN, 0);
+		input_sync(pen_dev);
+		mutex_unlock(&pen_dev->mutex);
+	}
+
 	if (core_data->gesture_type)
 		core_data->hw_ops->after_event_handler(core_data);
 }
@@ -1856,8 +1875,10 @@ static int goodix_ts_suspend(struct goodix_ts_core *core_data)
 	/* enter sleep mode or power off */
 	if (core_data->board_data.sleep_enable)
 		hw_ops->suspend(core_data);
-	else
-		goodix_ts_power_off(core_data);
+/*Add by T2M-mingwu.zhang for FP5-195 remarks: Double click on driver update.[Begin]*/	
+/* 	else
+		goodix_ts_power_off(core_data); */
+/*Add by T2M-mingwu.zhang [End]*/		
 
 	/* inform exteranl modules */
 	mutex_lock(&goodix_modules.mutex);

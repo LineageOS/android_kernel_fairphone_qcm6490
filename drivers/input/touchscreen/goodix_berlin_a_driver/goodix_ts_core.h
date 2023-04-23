@@ -42,8 +42,9 @@
 
 #define GOODIX_CORE_DRIVER_NAME			"goodix_ts"
 #define GOODIX_PEN_DRIVER_NAME			"goodix_ts,pen"
-#define GOODIX_DRIVER_VERSION			"v1.3.6"
+#define GOODIX_DRIVER_VERSION			"v1.3.7"
 #define GOODIX_MAX_TOUCH				10
+#define GOODIX_MAX_KEY					10
 #define GOODIX_PEN_MAX_PRESSURE			4096
 #define GOODIX_MAX_PEN_KEY				2
 #define GOODIX_PEN_MAX_TILT				90
@@ -64,9 +65,19 @@
 #define TS_DEFAULT_CFG_BIN				"goodix_cfg_group.bin"
 
 enum GOODIX_GESTURE_TYP {
-	GESTURE_SINGLE_TAP = (1 << 0),
-	GESTURE_DOUBLE_TAP = (1 << 1),
-	GESTURE_FOD_PRESS  = (1 << 2)
+	GESTURE_C			= (1 << 0),
+	GESTURE_E			= (1 << 1),
+	GESTURE_F			= (1 << 2),
+	GESTURE_O			= (1 << 3),
+	GESTURE_M			= (1 << 4),
+	GESTURE_W			= (1 << 5),
+	GESTURE_DOUBLE_TAP	= (1 << 7),
+	GESTURE_BA			= (1 << 8),
+	GESTURE_AB			= (1 << 9),
+	GESTURE_AA			= (1 << 10),
+	GESTURE_BB			= (1 << 11),
+	GESTURE_SINGLE_TAP	= (1 << 12),
+	GESTURE_FOD_PRESS	= (1 << 13)
 };
 
 enum CORD_PROB_STA {
@@ -474,6 +485,15 @@ enum ts_event_type {
 	EVENT_GESTURE = (1 << 3),
 };
 
+enum ts_point_type {
+	POINT_TYPE_NULL = 0,
+	POINT_TYPE_STYLUS_HOVER = 1,
+	POINT_TYPE_FINGER = 2,
+	POINT_TYPE_STYLUS = 3,
+	POINT_TYPE_GLOVE = 4,
+	POINT_TYPE_KEY = 5,
+};
+
 enum ts_request_type {
 	REQUEST_TYPE_CONFIG = 1,
 	REQUEST_TYPE_RESET = 3,
@@ -511,18 +531,21 @@ struct goodix_pen_coords {
 	signed char tilt_y;
 };
 
-/* touch event data */
-struct goodix_touch_data {
-	int touch_num;
-	struct goodix_ts_coords coords[GOODIX_MAX_TOUCH];
-};
-
 struct goodix_ts_key {
 	int status;
 	int code;
 };
 
+/* touch event data */
+struct goodix_touch_data {
+	int touch_num;
+	bool have_key;
+	struct goodix_ts_key keys[GOODIX_MAX_KEY];
+	struct goodix_ts_coords coords[GOODIX_MAX_TOUCH];
+};
+
 struct goodix_pen_data {
+	bool is_hover;
 	struct goodix_pen_coords coords;
 	struct goodix_ts_key keys[GOODIX_MAX_PEN_KEY];
 };
@@ -534,7 +557,7 @@ struct goodix_pen_data {
  * @event_data: event data
  */
 struct goodix_ts_event {
-	enum ts_event_type event_type;
+	u8 event_type;
 	u8 fp_flag;	 /* finger print DOWN flag */
 	u8 request_code; /* represent the request type */
 	u8 gesture_type;
@@ -638,7 +661,7 @@ struct goodix_ts_core {
 	struct goodix_ic_config *ic_configs[GOODIX_MAX_CONFIG_GROUP];
 	struct regulator *avdd;
 	struct regulator *iovdd;
-	unsigned char gesture_type;
+	u32 gesture_type;
 
 	int power_on;
 	int irq;

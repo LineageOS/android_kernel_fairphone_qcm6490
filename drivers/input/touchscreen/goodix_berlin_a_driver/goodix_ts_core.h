@@ -40,6 +40,14 @@
 #include <linux/fb.h>
 #endif
 
+/*Add by T2M-mingwu.zhang for FP5-538 remarks: TP/LCD Device Information Development.[Begin]*/	
+#ifdef CONFIG_EMKIT_INFO
+#include <emkit/emkit_info.h>
+#define GOODIX_NAME "GOODIX"
+extern char emkit_buf[256];
+#endif
+/*Add by T2M-mingwu.zhang [End]*/
+
 #define GOODIX_CORE_DRIVER_NAME			"goodix_ts"
 #define GOODIX_PEN_DRIVER_NAME			"goodix_ts,pen"
 #define GOODIX_DRIVER_VERSION			"v1.3.7"

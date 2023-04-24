@@ -49,6 +49,12 @@ enum brl_request_code {
 	BRL_REQUEST_CODE_CLOCK = 0x04,
 };
 
+/*Add by T2M-mingwu.zhang for FP5-538 remarks: TP/LCD Device Information Development.[Begin]*/
+#ifdef CONFIG_EMKIT_INFO
+char emkit_buf[256] = {0,};
+#endif
+/*Add by T2M-mingwu.zhang [End]*/
+
 static int brl_select_spi_mode(struct goodix_ts_core *cd)
 {
 	int ret;
@@ -789,6 +795,11 @@ static int brl_read_version(struct goodix_ts_core *cd,
 	struct goodix_ts_hw_ops *hw_ops = cd->hw_ops;
 	u8 buf[sizeof(struct goodix_fw_version)] = {0};
 	u8 temp_pid[8] = {0};
+/*Add by T2M-mingwu.zhang for FP5-538 remarks: TP/LCD Device Information Development.[Begin]*/	
+#ifdef CONFIG_EMKIT_INFO	
+	int cnt = -EINVAL;
+#endif
+/*Add by T2M-mingwu.zhang [End]*/
 
 	if (cd->bus->ic_type == IC_TYPE_BERLIN_A)
 		fw_addr = FW_VERSION_INFO_ADDR_BRA;
@@ -818,6 +829,17 @@ static int brl_read_version(struct goodix_ts_core *cd,
 	}
 	memcpy(version, buf, sizeof(*version));
 	memcpy(temp_pid, version->rom_pid, sizeof(version->rom_pid));
+
+/*Add by T2M-mingwu.zhang for FP5-538 remarks: TP/LCD Device Information Development.[Begin]*/	
+#ifdef CONFIG_EMKIT_INFO
+		cnt = snprintf(&emkit_buf[0], 256,"touch_ic:%s\n", version->patch_pid);
+		cnt += snprintf(&emkit_buf[cnt], 256,"fw_ver:%02x%02x%02x%02x\n", 
+			version->patch_vid[0],version->patch_vid[1],version->patch_vid[2],version->patch_vid[3]);
+		cnt += snprintf(&emkit_buf[cnt], 256,"vendor:%s\n", GOODIX_NAME);
+        SetModuleName(MODULE_TOUCH, emkit_buf, __FUNCTION__);
+#endif
+/*Add by T2M-mingwu.zhang [End]*/
+	
 	ts_info("rom_pid:%s", temp_pid);
 	ts_info("rom_vid:%*ph", (int)sizeof(version->rom_vid),
 		version->rom_vid);

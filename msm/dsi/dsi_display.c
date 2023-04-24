@@ -27,6 +27,10 @@
 #include <video/mipi_display.h>
 #endif
 
+#ifdef CONFIG_EMKIT_INFO
+#include <emkit/emkit_info.h>
+#endif
+
 #define to_dsi_display(x) container_of(x, struct dsi_display, host)
 #define INT_BASE_10 10
 
@@ -54,6 +58,28 @@ static const struct of_device_id dsi_display_dt_match[] = {
 	{.compatible = "qcom,dsi-display"},
 	{}
 };
+
+/*Add by T2M-mingwu.zhang for FP5-538 remarks: TP/LCD Device Information Development.[Begin]*/	
+#ifdef CONFIG_EMKIT_INFO
+static int display_info(struct dsi_display *display)
+{
+	int rc=0;
+	int cnt = -EINVAL;
+	char *disp_info[] = {"RM692E5","Raydium","FP5"};
+	char buf[256] = {0,};
+
+ 	if (!strcmp(display->panel->name, "rm692e5 amoled command mode dsi panel")) {
+		cnt = snprintf(&buf[0], 256,"display_ic:%s\n", disp_info[0]);
+		cnt += snprintf(&buf[cnt], 256,"vendor:%s\n", disp_info[1]);
+		cnt += snprintf(&buf[cnt], 256,"project:%s\n", disp_info[2]);
+        SetModuleName(MODULE_DISPLAY, buf, __FUNCTION__);
+    } else {
+		rc = -EINVAL;
+	}
+	return rc;
+}
+#endif
+/*Add by T2M-mingwu.zhang [End]*/
 
 bool is_skip_op_required(struct dsi_display *display)
 {
@@ -5879,6 +5905,16 @@ static int dsi_display_bind(struct device *dev,
 	}
 
 	DSI_INFO("Successfully bind display panel '%s'\n", display->name);
+
+/*Add by T2M-mingwu.zhang for FP5-538 remarks: TP/LCD Device Information Development.[Begin]*/
+#ifdef CONFIG_EMKIT_INFO
+	rc = display_info(display);
+	if (rc) {
+		DSI_ERR("[%s] printing display information failed, rc=%d\n",display->name, rc);	
+	}
+#endif
+/*Add by T2M-mingwu.zhang [End]*/
+
 	display->drm_dev = drm;
 
 	display_for_each_ctrl(i, display) {

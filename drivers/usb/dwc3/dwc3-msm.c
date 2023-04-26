@@ -3448,9 +3448,12 @@ static int dwc3_msm_resume(struct dwc3_msm *mdwc)
 	long core_clk_rate;
 	struct dwc3 *dwc = platform_get_drvdata(mdwc->dwc3);
 	struct usb_irq *uirq;
+	/* zxz add for USB redriver ptn36502 ,begin */
+	#ifdef CONFIG_USB_REDRIVER_PTN36502
 	int value = 0;
 	union power_supply_propval pval = {0};
-
+    #endif
+    /* zxz add for USB redriver ptn36502 ,end */
 
 	dev_dbg(mdwc->dev, "%s: exiting lpm\n", __func__);
 
@@ -3460,7 +3463,7 @@ static int dwc3_msm_resume(struct dwc3_msm *mdwc)
 		mdwc->usb_psy = power_supply_get_by_name("usb");
 		if (!mdwc->usb_psy) {
 			dev_err(mdwc->dev, "dwc3_msm_resume Could not get usb psy\n");
-			return -ENODEV;
+			goto usbpsy_err;//zxz add not return here, fastbootd no usb psy ,if return will cause fastbootd no usb port
 		}
 	}
 
@@ -3468,6 +3471,7 @@ static int dwc3_msm_resume(struct dwc3_msm *mdwc)
 	value = pval.intval;
 	pr_err("zxz-------dwc3_msm_resume-----orientaiton=%d---\n",value);
 	ptn_usb_orientation_switch(value);
+usbpsy_err:
 #endif
 /* zxz add for USB redriver ptn36502 ,end */
 

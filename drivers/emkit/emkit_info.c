@@ -188,6 +188,10 @@ INFO_FUNC(g_emkit_info.board_module_name[MODULE_DISPLAY], display);
 INFO_FUNC(g_emkit_info.board_module_name[MODULE_TOUCH], touch);
 /*Add by T2M-mingwu.zhang [End]*/
 
+/*Add by T2M-xianzhu.zhang for FP5-569 : get battery id value. [Begin]*/
+INFO_FUNC(g_emkit_info.board_module_name[MODULE_BATTERY_ID], battery_id);
+/*Add by T2M-xianzhu.zhang [End]*/
+
 static struct kobj_attribute emkit_attrs[] = {
     __ATTR(emkit_cpu, S_IRUGO|S_IWUSR|S_IWGRP, emkit_cpu_show, emkit_cpu_store),
     __ATTR(emkit_memory, S_IRUGO|S_IWUSR|S_IWGRP, emkit_memory_show, emkit_memory_store),
@@ -204,6 +208,10 @@ static struct kobj_attribute emkit_attrs[] = {
     __ATTR(display, S_IRUGO|S_IWUSR|S_IWGRP, display_show, display_store),
     __ATTR(touch, S_IRUGO|S_IWUSR|S_IWGRP, touch_show, touch_store),
 /*Add by T2M-mingwu.zhang [End]*/
+
+/*Add by T2M-xianzhu.zhang for FP5-569 : get battery id value. [Begin]*/
+    __ATTR(battery_id, S_IRUGO|S_IWUSR|S_IWGRP, battery_id_show, battery_id_store), 
+/*Add by T2M-xianzhu.zhang [End]*/
 };
 
 #define EMKIT_ATTRS_NUM (sizeof(emkit_attrs) / sizeof(emkit_attrs[0]))

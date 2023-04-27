@@ -21,6 +21,11 @@
 #include <linux/soc/qcom/pmic_glink.h>
 #include <linux/soc/qcom/battery_charger.h>
 #include "qti_typec_class.h"
+/*Add by T2M-xianzhu.zhang for FP5-569 : get battery id value for emkit. [Begin]*/
+#ifdef CONFIG_EMKIT_INFO
+#include <emkit/emkit_info.h>
+#endif
+/*Add by T2M-xianzhu.zhang [End]*/
 
 #define MSG_OWNER_BC			32778
 #define MSG_TYPE_REQ_RESP		1
@@ -2019,6 +2024,27 @@ static int register_extcon_conn_type(struct battery_chg_dev *bcdev)
 	return rc;
 }
 
+/*Add by T2M-xianzhu.zhang for FP5-569 : get battery id value for emkit. [Begin]*/
+#ifdef CONFIG_EMKIT_INFO
+static int emkit_get_battery_id(struct battery_chg_dev *bcdev)
+{
+	struct psy_state *pst = &bcdev->psy_list[PSY_TYPE_BATTERY];
+	int rc =0 ;
+    char emkit_buf[16];
+	
+	rc = read_property_id(bcdev, pst, BATT_RESISTANCE_ID);
+	if (rc < 0)
+		return rc;
+
+    rc=scnprintf(emkit_buf, 16, "%u\n", pst->prop[BATT_RESISTANCE_ID]);
+	if (rc < 0)
+		return rc;
+
+    SetModuleName(MODULE_BATTERY_ID, emkit_buf, __FUNCTION__);
+	return rc;
+}
+#endif
+/*Add by T2M-xianzhu.zhang [End]*/
 static int battery_chg_probe(struct platform_device *pdev)
 {
 	struct battery_chg_dev *bcdev;
@@ -2124,6 +2150,12 @@ static int battery_chg_probe(struct platform_device *pdev)
 
 	schedule_work(&bcdev->usb_type_work);
 
+
+	/*Add by T2M-xianzhu.zhang for FP5-569 : get battery id value for emkit. [Begin]*/
+	#ifdef CONFIG_EMKIT_INFO
+		emkit_get_battery_id(bcdev);
+	#endif
+	/*Add by T2M-xianzhu.zhang [End]*/
 	return 0;
 error:
 	bcdev->initialized = false;

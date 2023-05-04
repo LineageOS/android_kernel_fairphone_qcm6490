@@ -677,6 +677,9 @@ struct goodix_ts_core {
 
 	atomic_t irq_enabled;
 	atomic_t suspended;
+
+	/* target config type enum GOODIX_IC_CONFIG_TYPE */
+	enum GOODIX_IC_CONFIG_TYPE config_type;
 	/* when this flag is true, driver should not clean the sync flag */
 	bool tools_ctrl_sync;
 

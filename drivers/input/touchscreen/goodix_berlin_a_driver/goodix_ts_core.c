@@ -547,6 +547,66 @@ exit:
 	return count;
 }
 
+static DEFINE_MUTEX(config_type_mutex);
+static int goodix_ts_switch_config(struct goodix_ts_core *cd, enum GOODIX_IC_CONFIG_TYPE type)
+{
+	struct goodix_ts_hw_ops *hw_ops = cd->hw_ops;
+	struct goodix_ic_config *cfg = NULL;
+	int ret = -EFAULT;
+
+	cfg = cd->ic_configs[type];
+	if (!cfg || cfg->len <= 0) {
+		ts_info("no valid config found type %d", type);
+		return -EINVAL;
+	}
+
+	mutex_lock(&config_type_mutex);
+	hw_ops->irq_enable(cd, false);
+
+	if (hw_ops->send_config) {
+		ret = hw_ops->send_config(cd, cfg->data, cfg->len);
+		if (!ret)
+			cd->config_type = type;
+	}
+
+	hw_ops->irq_enable(cd, true);
+	mutex_unlock(&config_type_mutex);
+
+	return ret;
+}
+
+
+/* set work mode */
+static ssize_t goodix_ts_config_type_store(struct device *dev,
+						struct device_attribute *attr,
+						const char *buf, size_t count)
+{
+	struct goodix_ts_core *core_data = dev_get_drvdata(dev);
+	enum GOODIX_IC_CONFIG_TYPE type;
+	long result;
+	int ret;
+
+	if (kstrtol(buf, 0, &result)) {
+		ts_err("faield get config type");
+		return -EFAULT;
+	}
+	if (result >= GOODIX_MAX_CONFIG_GROUP || result < 0) {
+		ts_err("unsupported config type %ld", result);
+		return -EINVAL;
+	}
+	type = (enum GOODIX_IC_CONFIG_TYPE)result;
+
+	ret = goodix_ts_switch_config(core_data, type);
+	if (ret) {
+		ts_err("failed switch to config type %d", type);
+		ret = -EINVAL;
+	} else {
+		ts_info("success switch to config type %d", type);
+	}
+
+	return ret ? -EINVAL : count;
+}
+
 /* reg read/write */
 static u32 rw_addr;
 static u32 rw_len;
@@ -847,6 +907,8 @@ static DEVICE_ATTR(debug_log, 0664,
 		goodix_ts_debug_log_show, goodix_ts_debug_log_store);
 static DEVICE_ATTR(die_info, 0440,
 		die_info_show, NULL);
+static DEVICE_ATTR(config_type, 0220,
+		NULL, goodix_ts_config_type_store);
 
 static struct attribute *sysfs_attrs[] = {
 	&dev_attr_driver_info.attr,
@@ -859,6 +921,7 @@ static struct attribute *sysfs_attrs[] = {
 	&dev_attr_esd_info.attr,
 	&dev_attr_debug_log.attr,
 	&dev_attr_die_info.attr,
+	&dev_attr_config_type.attr,
 	NULL,
 };
 
@@ -1949,6 +2012,10 @@ static int goodix_ts_resume(struct goodix_ts_core *core_data)
 	else
 		goodix_ts_power_on(core_data);
 
+	/* recover config */
+	if (core_data->config_type != CONFIG_TYPE_NORMAL)
+		goodix_ts_switch_config(core_data, core_data->config_type);
+
 	mutex_lock(&goodix_modules.mutex);
 	if (!list_empty(&goodix_modules.head)) {
 		list_for_each_entry_safe(ext_module, next,
@@ -2287,6 +2354,7 @@ static int goodix_later_init_thread(void *data)
 	 * if not we will send config with interactive mode
 	 */
 	goodix_send_ic_config(cd, CONFIG_TYPE_NORMAL);
+	cd->config_type = CONFIG_TYPE_NORMAL;
 
 	/* init other resources */
 	ret = goodix_ts_stage2_init(cd);

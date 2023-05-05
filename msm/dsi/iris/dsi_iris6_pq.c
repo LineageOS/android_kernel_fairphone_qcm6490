@@ -221,14 +221,18 @@ void iris_quality_setting_off(void)
 	if (iris_setting.quality_cur.pq_setting.sdr2hdr != SDR2HDR_Bypass) {
 		iris_setting.quality_cur.pq_setting.sdr2hdr = SDR2HDR_Bypass;
 		iris_sdr2hdr_level_set(SDR2HDR_Bypass, false);
+#if 0
 		if (iris_setting.quality_cur.pq_setting.cmcolorgamut != 0) {
 			iris_setting.quality_cur.pq_setting.cmcolorgamut = 0;
 			iris_cm_color_gamut_set(
 				iris_setting.quality_cur.pq_setting.cmcolorgamut, false);
 		}
+#endif
 	}
 
+#if 0
 	iris_cm_csc_restore(false);
+#endif
 
 	iris_capture_ctrl_en = false;
 	iris_skip_dma = false;

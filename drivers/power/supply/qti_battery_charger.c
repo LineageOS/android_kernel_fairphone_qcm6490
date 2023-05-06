@@ -27,6 +27,12 @@
 #endif
 /*Add by T2M-xianzhu.zhang [End]*/
 
+/*Add by T2M-mingwu.zhang for FP5-187 remarks: Touch parameter scene differentiation.[Begin]*/
+#ifdef CONFIG_PROJECT_FP5
+extern void tp_get_usb_online(int online);
+#endif
+/*Add by T2M-mingwu.zhang [End]*/
+
 #define MSG_OWNER_BC			32778
 #define MSG_TYPE_REQ_RESP		1
 #define MSG_TYPE_NOTIFY			2
@@ -972,6 +978,14 @@ static int usb_psy_get_prop(struct power_supply *psy,
 	pval->intval = pst->prop[prop_id];
 	if (prop == POWER_SUPPLY_PROP_TEMP)
 		pval->intval = DIV_ROUND_CLOSEST((int)pval->intval, 10);
+
+/*Add by T2M-mingwu.zhang for FP5-187 remarks: Touch parameter scene differentiation.[Begin]*/
+#ifdef CONFIG_PROJECT_FP5
+	if (prop == POWER_SUPPLY_PROP_ONLINE){
+		tp_get_usb_online(pval->intval);
+	}
+#endif
+/*Add by T2M-mingwu.zhang [End]*/
 
 	return 0;
 }

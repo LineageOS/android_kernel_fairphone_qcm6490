@@ -9,8 +9,13 @@
 #include "cam_ois_core.h"
 #include "cam_debug_util.h"
 #include "camera_main.h"
+
+// FP5-935. Build error after GKI built enabled. liquan.zhou.t2m. 202300508
+#ifdef CONFIG_QGKI
 //extern int dw9784_download_open_camera(struct cam_ois_ctrl_t *o_ctrl);
 extern int ois_creat_sysfs(struct cam_ois_ctrl_t *o_ctrl);
+#endif //CONFIG_QGKI
+
 static int cam_ois_subdev_close_internal(struct v4l2_subdev *sd,
 	struct v4l2_subdev_fh *fh)
 {
@@ -333,8 +338,13 @@ static int cam_ois_component_bind(struct device *dev,
         //add by jinghuang
         //CAM_ERR(CAM_OIS, "jinghuang dw9784_download_open_camera");
         //dw9784_download_open_camera(o_ctrl);
+
+// FP5-935. Build error after GKI built enabled. liquan.zhou.t2m. 202300508
+#ifdef CONFIG_QGKI
         CAM_INFO(CAM_OIS, "jinghuang ois_creat_sysfs");
         ois_creat_sysfs(o_ctrl);
+#endif //CONFIG_QGKI
+
 	return rc;
 unreg_subdev:
 	cam_unregister_subdev(&(o_ctrl->v4l2_dev_str));

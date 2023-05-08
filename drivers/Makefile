@@ -170,8 +170,9 @@ camera-$(CONFIG_SPECTRA_SENSOR) += \
 	cam_sensor_module/cam_sensor_io/cam_sensor_qup_i2c.o \
 	cam_sensor_module/cam_sensor_io/cam_sensor_spi.o \
 	cam_sensor_module/cam_sensor_utils/cam_sensor_util.o \
-	cam_sensor_module/cam_res_mgr/cam_res_mgr.o \
-        cam_sensor_module/cam_ois/dw9784_ois.o
+	cam_sensor_module/cam_res_mgr/cam_res_mgr.o
+
+camera-$(CONFIG_QGKI) += cam_sensor_module/cam_ois/dw9784_ois.o
 
 camera-$(CONFIG_LEDS_QPNP_FLASH_V2) += \
 	cam_sensor_module/cam_flash/cam_flash_dev.o \

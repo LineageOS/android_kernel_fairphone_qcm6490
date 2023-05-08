@@ -14,7 +14,11 @@
 #include "cam_res_mgr_api.h"
 #include "cam_common_util.h"
 #include "cam_packet_util.h"
+
+// FP5-935. Build error after GKI built enabled. liquan.zhou.t2m. 202300508
+#ifdef CONFIG_QGKI
 extern int dw9784_download_open_camera(struct cam_ois_ctrl_t *o_ctrl);
+#endif
 
 int32_t cam_ois_construct_default_power_setting(
 	struct cam_sensor_power_ctrl_t *power_info)
@@ -662,12 +666,20 @@ static int cam_ois_pkt_parse(struct cam_ois_ctrl_t *o_ctrl, void *arg)
 			CAM_ERR(CAM_OIS,
 				"Cannot apply Init settings: rc = %d",
 				rc);
+// FP5-935. Build error after GKI built enabled. liquan.zhou.t2m. 202300508
+#ifdef CONFIG_QGKI
 			//goto pwr_dwn; //temp modify by jinghuang
+#else
+			goto pwr_dwn;
+#endif
 		}
 
+// FP5-935. Build error after GKI built enabled. liquan.zhou.t2m. 202300508
+#ifdef CONFIG_QGKI
                 //add by jinghuang
                 CAM_ERR(CAM_OIS, "jinghuang dw9784_download_open_camera");
                 dw9784_download_open_camera(o_ctrl);
+#endif
 
 		if (o_ctrl->is_ois_calib) {
 			rc = cam_ois_apply_settings(o_ctrl,

@@ -649,12 +649,6 @@ struct goodix_ic_config {
 	u8 data[GOODIX_CFG_MAX_SIZE];
 };
 
-/*Add by T2M-mingwu.zhang for FP5-187 remarks: Touch parameter scene differentiation.[Begin]*/
-#ifdef CONFIG_PROJECT_FP5
-extern struct goodix_ts_core *global_core_data;
-#endif
-/*Add by T2M-mingwu.zhang [End]*/
-
 struct goodix_ts_core {
 	int init_stage;
 	struct platform_device *pdev;

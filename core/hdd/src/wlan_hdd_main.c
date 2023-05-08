@@ -2150,6 +2150,8 @@ static void hdd_update_tgt_vht_cap(struct hdd_context *hdd_ctx,
 	band_5g->vht_cap.vht_mcs.tx_highest = cpu_to_le16(tx_highest_data_rate);
 }
 
+// FP5-935. Build error after GKI built enabled. liquan.zhou.t2m. 202300508
+#ifdef CONFIG_QGKI
 //add-begin by t2m.wangyang.xie,get wifi mac address
 #define MAC_LEN		6
 #define MAC_STR_LEN	17
@@ -2279,6 +2281,7 @@ static int jrd_get_mac_addr(unsigned char *eaddr)
  out: ;;
     return -1;
 }
+#endif //CONFIG_QGKI
 //add-end
 
 /**
@@ -2294,15 +2297,18 @@ static int jrd_get_mac_addr(unsigned char *eaddr)
  */
 static int hdd_generate_macaddr_auto(struct hdd_context *hdd_ctx)
 {
-	//unsigned int serialno = 0;
 	struct qdf_mac_addr mac_addr = {
 		{0x00, 0x0A, 0xF5, 0x00, 0x00, 0x00}
 	};
+// FP5-935. Build error after GKI built enabled. liquan.zhou.t2m. 202300508
+#ifdef CONFIG_QGKI
         //add-begin by t2m.wangyang.xie,get wifi mac address
         int ret = 0;
 	unsigned char nv_mac[6];
         //add-end
-	/*serialno = pld_socinfo_get_serial_number(hdd_ctx->parent_dev);
+#else
+	unsigned int serialno = 0;
+	serialno = pld_socinfo_get_serial_number(hdd_ctx->parent_dev);
 	if (serialno == 0)
 		return -EINVAL;
 
@@ -2310,8 +2316,11 @@ static int hdd_generate_macaddr_auto(struct hdd_context *hdd_ctx)
 
 	mac_addr.bytes[3] = (serialno >> 16) & 0xff;
 	mac_addr.bytes[4] = (serialno >> 8) & 0xff;
-	mac_addr.bytes[5] = serialno & 0xff;*/
+	mac_addr.bytes[5] = serialno & 0xff;
+#endif //CONFIG_QGKI
 
+// FP5-935. Build error after GKI built enabled. liquan.zhou.t2m. 202300508
+#ifdef CONFIG_QGKI
         //add-begin by t2m.wangyang.xie,get wifi mac address
         ret = jrd_get_mac_addr(nv_mac);
         if ((ret==-1) || (nv_mac[0]==0x00 && nv_mac[1]==0x00 && nv_mac[2]==0x00));
@@ -2324,6 +2333,7 @@ static int hdd_generate_macaddr_auto(struct hdd_context *hdd_ctx)
 		  mac_addr.bytes[5] = nv_mac[5];
         }
         //add-end
+#endif
 
 	hdd_update_macaddr(hdd_ctx, mac_addr, true);
 	return 0;

@@ -95,20 +95,27 @@ static ssize_t goodix_ts_config_type_store(struct device *dev,
 	return ret ? -EINVAL : count;
 }
 
-static int usb_online;
+static int usb_online,usb_if_err=0;
 struct goodix_ts_core *global_core_data;
 void tp_get_usb_online(int online)
 {
+	int ret = 0;
+
 	if (usb_online != online){
 		if(online)
-			goodix_ts_switch_config(global_core_data, CONFIG_TYPE_NORMAL);		//charging mode
+			ret = goodix_ts_switch_config(global_core_data, (enum GOODIX_IC_CONFIG_TYPE)CFG_TYPE_CHARGE);			//charging mode
 		else
-			goodix_ts_switch_config(global_core_data, CONFIG_TYPE_HOLSTER);		//Non charging mode
+			ret = goodix_ts_switch_config(global_core_data, (enum GOODIX_IC_CONFIG_TYPE)CFG_TYPE_NON_CHARGE);		//Non charging mode
+
+		if(ret){
+			usb_if_err = -EPERM;
+			ts_err("usb change touch config fail, error flage=[%d]!\n",usb_if_err);
+		}
 
 		usb_online = online;
-		pr_err("zmw tp get usb online ,online=[%d]!\n",online);
+		ts_err("tp get usb online ,online=[%d]!\n",online);
 	}else
-		pr_debug("tp get usb online ,state is same not changed! \n");
+		ts_info("tp get usb online ,state is same not changed! \n");
 
 }
 EXPORT_SYMBOL_GPL(tp_get_usb_online);
@@ -2035,6 +2042,19 @@ static int goodix_ts_resume(struct goodix_ts_core *core_data)
 
 /*Add by T2M-mingwu.zhang for FP5-187 remarks: Touch parameter scene differentiation.[Begin]*/
 	/* recover config */
+	if(usb_if_err){	
+		usb_if_err = 0;
+		if(usb_online)
+			ret = goodix_ts_switch_config(global_core_data, (enum GOODIX_IC_CONFIG_TYPE)CFG_TYPE_CHARGE);			//charging mode
+		else
+			ret = goodix_ts_switch_config(global_core_data, (enum GOODIX_IC_CONFIG_TYPE)CFG_TYPE_NON_CHARGE);		//Non charging mode
+
+		ts_info("resume ret=[%d]!\n",ret);
+		if(ret){
+			usb_if_err = -EAGAIN; //recover error flage
+			ts_err("resume change touch config fail, keep error flage=[%d]!\n",usb_if_err);
+		}			
+	}
 /* 	if (core_data->config_type != CONFIG_TYPE_NORMAL)
 		goodix_ts_switch_config(core_data, core_data->config_type); */
 /*Add by T2M-mingwu.zhang [End]*/
@@ -2525,7 +2545,7 @@ static int goodix_ts_probe(struct platform_device *pdev)
 /*Add by T2M-mingwu.zhang for FP5-187 remarks: Touch parameter scene differentiation.[Begin]*/
 #ifdef CONFIG_PROJECT_FP5
 	global_core_data = core_data;
-	usb_online = CONFIG_TYPE_NORMAL;
+	usb_online = CFG_TYPE_CHARGE;
 #endif
 /*Add by T2M-mingwu.zhang [End]*/
 

@@ -652,6 +652,11 @@ struct goodix_ic_config {
 /*Add by T2M-mingwu.zhang for FP5-187 remarks: Touch parameter scene differentiation.[Begin]*/
 #ifdef CONFIG_PROJECT_FP5
 extern struct goodix_ts_core *global_core_data;
+enum GOODIX_CFG_CHARGE_TYPE {
+	CFG_TYPE_NULL = 0,
+	CFG_TYPE_CHARGE = CONFIG_TYPE_NORMAL,
+	CFG_TYPE_NON_CHARGE = CONFIG_TYPE_HOLSTER,
+};
 #endif
 /*Add by T2M-mingwu.zhang [End]*/
 

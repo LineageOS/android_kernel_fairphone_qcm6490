@@ -1841,20 +1841,12 @@ static int goodix_esd_notifier_callback(struct notifier_block *nb,
 	switch (action) {
 	case NOTIFY_FWUPDATE_START:
 	case NOTIFY_SUSPEND:
-ts_err("zmw---SUSPEND");	
-/*Add by T2M-mingwu.zhang for FP5-195 remarks: Double click on driver update.[Begin]*/	
-//		goodix_ts_power_off(ts_esd->ts_core);
-/*Add by T2M-mingwu.zhang [End]*/
-		break;		
 	case NOTIFY_ESD_OFF:
 		goodix_ts_esd_off(ts_esd->ts_core);
 		break;
 	case NOTIFY_FWUPDATE_FAILED:
 	case NOTIFY_FWUPDATE_SUCCESS:
 	case NOTIFY_RESUME:
-ts_err("zmw---RESUME");	
-		goodix_ts_power_on(ts_esd->ts_core);
-		break;	
 	case NOTIFY_ESD_ON:
 		goodix_ts_esd_on(ts_esd->ts_core);
 		break;
@@ -1965,12 +1957,10 @@ static int goodix_ts_suspend(struct goodix_ts_core *core_data)
 
 	/* enter sleep mode or power off */
 	if (core_data->board_data.sleep_enable)
-		hw_ops->suspend(core_data);
-/*Add by T2M-mingwu.zhang for FP5-195 remarks: Double click on driver update.[Begin]*/	
-/* 	else
-		goodix_ts_power_off(core_data); */
-/*Add by T2M-mingwu.zhang [End]*/		
-
+		hw_ops->suspend(core_data);	
+	else
+		goodix_ts_power_off(core_data);
+		
 	/* inform exteranl modules */
 	mutex_lock(&goodix_modules.mutex);
 	if (!list_empty(&goodix_modules.head)) {
@@ -2040,24 +2030,9 @@ static int goodix_ts_resume(struct goodix_ts_core *core_data)
 	else
 		goodix_ts_power_on(core_data);
 
-/*Add by T2M-mingwu.zhang for FP5-187 remarks: Touch parameter scene differentiation.[Begin]*/
 	/* recover config */
-	if(usb_if_err){	
-		usb_if_err = 0;
-		if(usb_online)
-			ret = goodix_ts_switch_config(global_core_data, (enum GOODIX_IC_CONFIG_TYPE)CFG_TYPE_CHARGE);			//charging mode
-		else
-			ret = goodix_ts_switch_config(global_core_data, (enum GOODIX_IC_CONFIG_TYPE)CFG_TYPE_NON_CHARGE);		//Non charging mode
-
-		ts_info("resume ret=[%d]!\n",ret);
-		if(ret){
-			usb_if_err = -EAGAIN; //recover error flage
-			ts_err("resume change touch config fail, keep error flage=[%d]!\n",usb_if_err);
-		}			
-	}
 /* 	if (core_data->config_type != CONFIG_TYPE_NORMAL)
 		goodix_ts_switch_config(core_data, core_data->config_type); */
-/*Add by T2M-mingwu.zhang [End]*/
 
 	mutex_lock(&goodix_modules.mutex);
 	if (!list_empty(&goodix_modules.head)) {
@@ -2079,6 +2054,21 @@ static int goodix_ts_resume(struct goodix_ts_core *core_data)
 	mutex_unlock(&goodix_modules.mutex);
 
 out:
+/*Add by T2M-mingwu.zhang for FP5-187 remarks: Touch parameter scene differentiation.[Begin]*/
+	if(usb_if_err){	
+		usb_if_err = 0;
+		if(usb_online)
+			ret = goodix_ts_switch_config(global_core_data, (enum GOODIX_IC_CONFIG_TYPE)CFG_TYPE_CHARGE);			//charging mode
+		else
+			ret = goodix_ts_switch_config(global_core_data, (enum GOODIX_IC_CONFIG_TYPE)CFG_TYPE_NON_CHARGE);		//Non charging mode
+
+		ts_info("resume ret=[%d]!\n",ret);
+		if(ret){
+			usb_if_err = -EAGAIN; //recover error flage
+			ts_err("resume change touch config fail, keep error flage=[%d]!\n",usb_if_err);
+		}			
+	}
+/*Add by T2M-mingwu.zhang [End]*/
 	/* enable irq */
 	hw_ops->irq_enable(core_data, true);
 	/* open esd */

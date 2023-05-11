@@ -3439,6 +3439,7 @@ static int dwc3_msm_suspend(struct dwc3_msm *mdwc, bool force_power_collapse,
 /* zxz add for USB redriver ptn36502 ,begin */
 #ifdef CONFIG_USB_REDRIVER_PTN36502
 extern void ptn_usb_orientation_switch(int cc_orient);
+extern bool ptn_dp_enabled; //add by yushixian for FP5-733 20230511
 #endif
 /* zxz add for USB redriver ptn36502 ,end */
 
@@ -3469,8 +3470,12 @@ static int dwc3_msm_resume(struct dwc3_msm *mdwc)
 
 	power_supply_get_property(mdwc->usb_psy,POWER_SUPPLY_PROP_TYPEC_CC_ORIENTATION, &pval);
 	value = pval.intval;
-	pr_err("zxz-------dwc3_msm_resume-----orientaiton=%d---\n",value);
-	ptn_usb_orientation_switch(value);
+	//modified by yushixian for FP5-733 20230511 start
+	if (!ptn_dp_enabled) {
+		pr_err("zxz-------dwc3_msm_resume-----orientaiton=%d---\n",value);
+		ptn_usb_orientation_switch(value);
+	}
+	//modified by yushixian for FP5-733 20230511 end
 usbpsy_err:
 #endif
 /* zxz add for USB redriver ptn36502 ,end */

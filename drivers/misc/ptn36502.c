@@ -17,6 +17,7 @@
 struct i2c_client *ptn_client;
 static int redrive_ldo1v8_en;
 static int redriver_en;
+bool ptn_dp_enabled = false; //add by yushixian for FP5-733 20230511
 
 static int ptn_write_reg(u8 reg, u8 val)
 {
@@ -51,10 +52,10 @@ static int ptn_read_reg(u8 reg, u8 *data)
 
 
 static int g_orientation = 0;
-
-void ptn_orientation_switch(int orientation)
+	//modified by yushixian for FP5-733 20230511 start
+void ptn_orientation_switch(int orientation, bool enable)
 {
-	pr_err("%s: orientation=%d\n", __func__, orientation);
+	pr_err("%s: orientation=%d enable = %d\n", __func__, orientation,enable);
 	if (orientation == 0) {
 		ptn_write_reg(0x0b, 0x01);
 	} else if (orientation == 1) {
@@ -64,7 +65,8 @@ void ptn_orientation_switch(int orientation)
 		//ptn_write_reg(0x0b, 0x21);
 		//gpio_direction_output(aux_switch_gpio, 1); //zxz notice it 
 	}
-
+	ptn_dp_enabled = enable;
+	//modified by yushixian for FP5-733 20230511 end
 	g_orientation = orientation;
 }
 EXPORT_SYMBOL(ptn_orientation_switch);

@@ -87,7 +87,7 @@ static int brl_dev_confirm(struct goodix_ts_core *cd)
 	int retry = GOODIX_RETRY_3;
 	u8 tx_buf[8] = {0};
 	u8 rx_buf[8] = {0};
-	u8 i =0;
+//	u8 i =0;
 
 /*Add by T2M-mingwu.zhang for FP5-195 remarks: Double click on driver update.[Begin]*/	
 return ret;

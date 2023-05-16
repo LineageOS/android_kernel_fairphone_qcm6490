@@ -117,6 +117,7 @@ enum battery_property_id {
 	//zxzid add for battery resistance id
 	BATT_RESISTANCE_ID,
 	BATT_USER_FCC,//zxzfcc
+	BATT_SHIP_MODE,//FP5-839 zxzshipmode
 	#endif
 	BATT_PROP_MAX,
 };
@@ -1157,6 +1158,22 @@ static int battery_psy_set_charge_current_by_user(struct battery_chg_dev *bcdev,
     return rc;
 
 }
+
+/*FP5-839 Add by T2M.zhangxianzhu,add for set ship mode in AP, zxzshipmode ,Begin */
+static int battery_psy_set_ship_mode(struct battery_chg_dev *bcdev, int val)
+{
+	int rc = 0;
+	u32 ship_mode = val;
+	rc = write_property_id(bcdev, &bcdev->psy_list[PSY_TYPE_BATTERY], BATT_SHIP_MODE, ship_mode);
+    if (rc < 0) {
+		pr_err("%s: Failed to set ship_mode %u, rc=%d\n", __func__, ship_mode, rc);
+	}
+    else
+        pr_debug("%s: Set ship_mode to %u uA\n", __func__, ship_mode);
+    return rc;
+
+}
+/*FP5-839 Add by T2M.zhangxianzhu,End */
 #endif
 
 
@@ -1224,6 +1241,8 @@ static int battery_psy_set_prop(struct power_supply *psy,
 	#ifdef CONFIG_QGKI
 	case POWER_SUPPLY_PROP_USER_FCC://zxzfcc
 		return battery_psy_set_charge_current_by_user(bcdev, pval->intval);
+	case POWER_SUPPLY_PROP_SHIP_MODE://FP5-839 zxzshipmode
+		return battery_psy_set_ship_mode(bcdev, pval->intval);
 	#endif
 	default:
 		return -EINVAL;
@@ -1238,6 +1257,7 @@ static int battery_psy_prop_is_writeable(struct power_supply *psy,
 	switch (prop) {
 	#ifdef CONFIG_QGKI
 	case POWER_SUPPLY_PROP_USER_FCC://zxzfcc
+	case POWER_SUPPLY_PROP_SHIP_MODE://FP5-839 zxzshipmode
 	#endif
 	case POWER_SUPPLY_PROP_CHARGE_CONTROL_LIMIT:
 		return 1;
@@ -1276,6 +1296,7 @@ static enum power_supply_property battery_props[] = {
 	/* zxzid add for battery resistance id */
 	POWER_SUPPLY_PROP_RESISTANCE_ID,
 	POWER_SUPPLY_PROP_USER_FCC,//zxzfcc
+	POWER_SUPPLY_PROP_SHIP_MODE,//FP5-839 zxzshipmode
 	#endif
 };
 

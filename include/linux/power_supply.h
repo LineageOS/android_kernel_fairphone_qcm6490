@@ -119,6 +119,7 @@ enum power_supply_property {
 	#ifdef CONFIG_QGKI
 	POWER_SUPPLY_PROP_RESISTANCE_ID, /* zxzid add for battery resistance id */
 	POWER_SUPPLY_PROP_USER_FCC, /*Add by T2M.zhangxianzhu for setting FCC by AP, zxzfcc*/
+	POWER_SUPPLY_PROP_SHIP_MODE, /*FP5-839 Add by T2M.zhangxianzhu for setting ship mode by AP, zxzshipmode*/
 	#endif
 	POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN,
 	POWER_SUPPLY_PROP_CHARGE_EMPTY_DESIGN,

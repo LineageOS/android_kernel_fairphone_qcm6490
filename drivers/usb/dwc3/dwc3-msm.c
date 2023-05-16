@@ -3435,13 +3435,14 @@ static int dwc3_msm_suspend(struct dwc3_msm *mdwc, bool force_power_collapse,
 
 	return 0;
 }
-
+#ifdef CONFIG_QGKI
 /* zxz add for USB redriver ptn36502 ,begin */
 #ifdef CONFIG_USB_REDRIVER_PTN36502
 extern void ptn_usb_orientation_switch(int cc_orient);
 extern bool ptn_dp_enabled; //add by yushixian for FP5-733 20230511
 #endif
 /* zxz add for USB redriver ptn36502 ,end */
+#endif
 
 static int dwc3_msm_resume(struct dwc3_msm *mdwc)
 {
@@ -3449,15 +3450,18 @@ static int dwc3_msm_resume(struct dwc3_msm *mdwc)
 	long core_clk_rate;
 	struct dwc3 *dwc = platform_get_drvdata(mdwc->dwc3);
 	struct usb_irq *uirq;
+	
+	#ifdef CONFIG_QGKI
 	/* zxz add for USB redriver ptn36502 ,begin */
 	#ifdef CONFIG_USB_REDRIVER_PTN36502
 	int value = 0;
 	union power_supply_propval pval = {0};
     #endif
     /* zxz add for USB redriver ptn36502 ,end */
-
+	#endif
 	dev_dbg(mdwc->dev, "%s: exiting lpm\n", __func__);
 
+#ifdef CONFIG_QGKI
 /* zxz add for USB redriver ptn36502 ,begin */
 #ifdef CONFIG_USB_REDRIVER_PTN36502
 	if (!mdwc->usb_psy) {
@@ -3479,7 +3483,7 @@ static int dwc3_msm_resume(struct dwc3_msm *mdwc)
 usbpsy_err:
 #endif
 /* zxz add for USB redriver ptn36502 ,end */
-
+#endif
 	/*
 	 * If h/w exited LPM without any events, ensure
 	 * h/w is reset before processing any new events.

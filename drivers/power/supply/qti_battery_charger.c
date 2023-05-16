@@ -21,11 +21,14 @@
 #include <linux/soc/qcom/pmic_glink.h>
 #include <linux/soc/qcom/battery_charger.h>
 #include "qti_typec_class.h"
+
+#ifdef CONFIG_QGKI
 /*Add by T2M-xianzhu.zhang for FP5-569 : get battery id value for emkit. [Begin]*/
 #ifdef CONFIG_EMKIT_INFO
 #include <emkit/emkit_info.h>
 #endif
 /*Add by T2M-xianzhu.zhang [End]*/
+#endif
 
 // FP5-935. Build error after GKI built enabled. liquan.zhou.t2m. 202300508
 #ifdef CONFIG_QGKI
@@ -110,9 +113,11 @@ enum battery_property_id {
 	BATT_RESISTANCE,
 	BATT_POWER_NOW,
 	BATT_POWER_AVG,
+	#ifdef CONFIG_QGKI
 	//zxzid add for battery resistance id
 	BATT_RESISTANCE_ID,
 	BATT_USER_FCC,//zxzfcc
+	#endif
 	BATT_PROP_MAX,
 };
 
@@ -131,8 +136,10 @@ enum usb_property_id {
 	USB_REAL_TYPE,
 	USB_TYPEC_COMPLIANT,
 	USB_SCOPE,
+	#ifdef CONFIG_QGKI
 	USB_TYPEC_CC_ORIENTATION,/*zxzcc add for typec cc orientation*/
 	USB_USER_INPUT_CURR, /*Add by T2M.zhangxianzhu for setting usb_icl by AP, zxzicl*/
+	#endif
 	USB_CONNECTOR_TYPE,
 	USB_PROP_MAX,
 };
@@ -301,10 +308,12 @@ static const int battery_prop_map[BATT_PROP_MAX] = {
 	[BATT_TTE_AVG]		= POWER_SUPPLY_PROP_TIME_TO_EMPTY_AVG,
 	[BATT_POWER_NOW]	= POWER_SUPPLY_PROP_POWER_NOW,
 	[BATT_POWER_AVG]	= POWER_SUPPLY_PROP_POWER_AVG,
+	#ifdef CONFIG_QGKI
 	//zxzid add for battery resistance id
 	[BATT_RESISTANCE_ID]	= POWER_SUPPLY_PROP_RESISTANCE_ID,
 	 /*Add by T2M.zhangxianzhu for setting FCC by AP, zxzfcc*/
 	[BATT_USER_FCC]	= POWER_SUPPLY_PROP_USER_FCC,
+	#endif
 };
 
 static const int usb_prop_map[USB_PROP_MAX] = {
@@ -317,8 +326,10 @@ static const int usb_prop_map[USB_PROP_MAX] = {
 	[USB_ADAP_TYPE]		= POWER_SUPPLY_PROP_USB_TYPE,
 	[USB_TEMP]		= POWER_SUPPLY_PROP_TEMP,
 	[USB_SCOPE]		= POWER_SUPPLY_PROP_SCOPE,
+	#ifdef CONFIG_QGKI
 	[USB_TYPEC_CC_ORIENTATION]		= POWER_SUPPLY_PROP_TYPEC_CC_ORIENTATION,/*zxzcc add for typec cc orientation*/
 	[USB_USER_INPUT_CURR] = POWER_SUPPLY_PROP_USER_INPUT_CURRENT, /*Add by T2M.zhangxianzhu for setting usb_icl by AP, zxzicl*/
+	#endif
 };
 
 static const int wls_prop_map[WLS_PROP_MAX] = {
@@ -1009,7 +1020,9 @@ static int usb_psy_set_prop(struct power_supply *psy,
 		return prop_id;
 
 	switch (prop) {
+	#ifdef CONFIG_QGKI
     case POWER_SUPPLY_PROP_USER_INPUT_CURRENT: /*Add by T2M.zhangxianzhu for setting usb_icl by AP, zxzicl*/
+	#endif
 	case POWER_SUPPLY_PROP_INPUT_CURRENT_LIMIT:
 		rc = usb_psy_set_icl(bcdev, prop_id, pval->intval);
 		break;
@@ -1024,7 +1037,9 @@ static int usb_psy_prop_is_writeable(struct power_supply *psy,
 		enum power_supply_property prop)
 {
 	switch (prop) {
+	#ifdef CONFIG_QGKI
 	case POWER_SUPPLY_PROP_USER_INPUT_CURRENT: /*Add by T2M.zhangxianzhu for setting usb_icl by AP, zxzicl*/
+	#endif
 	case POWER_SUPPLY_PROP_INPUT_CURRENT_LIMIT:
 		return 1;
 	default:
@@ -1044,8 +1059,10 @@ static enum power_supply_property usb_props[] = {
 	POWER_SUPPLY_PROP_USB_TYPE,
 	POWER_SUPPLY_PROP_TEMP,
 	POWER_SUPPLY_PROP_SCOPE,
+	#ifdef CONFIG_QGKI
 	POWER_SUPPLY_PROP_TYPEC_CC_ORIENTATION,/*zxzcc add for typec cc orientation*/
 	POWER_SUPPLY_PROP_USER_INPUT_CURRENT,/*Add by T2M.zhangxianzhu for setting usb_icl by AP, zxzicl*/
+	#endif
 };
 
 static enum power_supply_usb_type usb_psy_supported_types[] = {
@@ -1125,7 +1142,7 @@ static int battery_psy_set_charge_current(struct battery_chg_dev *bcdev,
 	return rc;
 }
 
-
+#ifdef CONFIG_QGKI
 //zxzfcc
 static int battery_psy_set_charge_current_by_user(struct battery_chg_dev *bcdev, int val)
 {
@@ -1140,7 +1157,7 @@ static int battery_psy_set_charge_current_by_user(struct battery_chg_dev *bcdev,
     return rc;
 
 }
-
+#endif
 
 
 static int battery_psy_get_prop(struct power_supply *psy,
@@ -1204,8 +1221,10 @@ static int battery_psy_set_prop(struct power_supply *psy,
 	switch (prop) {
 	case POWER_SUPPLY_PROP_CHARGE_CONTROL_LIMIT:
 		return battery_psy_set_charge_current(bcdev, pval->intval);
+	#ifdef CONFIG_QGKI
 	case POWER_SUPPLY_PROP_USER_FCC://zxzfcc
 		return battery_psy_set_charge_current_by_user(bcdev, pval->intval);
+	#endif
 	default:
 		return -EINVAL;
 	}
@@ -1217,7 +1236,9 @@ static int battery_psy_prop_is_writeable(struct power_supply *psy,
 		enum power_supply_property prop)
 {
 	switch (prop) {
+	#ifdef CONFIG_QGKI
 	case POWER_SUPPLY_PROP_USER_FCC://zxzfcc
+	#endif
 	case POWER_SUPPLY_PROP_CHARGE_CONTROL_LIMIT:
 		return 1;
 	default:
@@ -1251,9 +1272,11 @@ static enum power_supply_property battery_props[] = {
 	POWER_SUPPLY_PROP_TIME_TO_EMPTY_AVG,
 	POWER_SUPPLY_PROP_POWER_NOW,
 	POWER_SUPPLY_PROP_POWER_AVG,
+	#ifdef CONFIG_QGKI
 	/* zxzid add for battery resistance id */
 	POWER_SUPPLY_PROP_RESISTANCE_ID,
 	POWER_SUPPLY_PROP_USER_FCC,//zxzfcc
+	#endif
 };
 
 static const struct power_supply_desc batt_psy_desc = {
@@ -2044,6 +2067,7 @@ static int register_extcon_conn_type(struct battery_chg_dev *bcdev)
 	return rc;
 }
 
+#ifdef CONFIG_QGKI
 /*Add by T2M-xianzhu.zhang for FP5-569 : get battery id value for emkit. [Begin]*/
 #ifdef CONFIG_EMKIT_INFO
 static int emkit_get_battery_id(struct battery_chg_dev *bcdev)
@@ -2065,6 +2089,8 @@ static int emkit_get_battery_id(struct battery_chg_dev *bcdev)
 }
 #endif
 /*Add by T2M-xianzhu.zhang [End]*/
+#endif
+
 static int battery_chg_probe(struct platform_device *pdev)
 {
 	struct battery_chg_dev *bcdev;
@@ -2170,12 +2196,13 @@ static int battery_chg_probe(struct platform_device *pdev)
 
 	schedule_work(&bcdev->usb_type_work);
 
-
+	#ifdef CONFIG_QGKI
 	/*Add by T2M-xianzhu.zhang for FP5-569 : get battery id value for emkit. [Begin]*/
 	#ifdef CONFIG_EMKIT_INFO
 		emkit_get_battery_id(bcdev);
 	#endif
 	/*Add by T2M-xianzhu.zhang [End]*/
+	#endif
 	return 0;
 error:
 	bcdev->initialized = false;

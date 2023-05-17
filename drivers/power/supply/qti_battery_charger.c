@@ -314,6 +314,7 @@ static const int battery_prop_map[BATT_PROP_MAX] = {
 	[BATT_RESISTANCE_ID]	= POWER_SUPPLY_PROP_RESISTANCE_ID,
 	 /*Add by T2M.zhangxianzhu for setting FCC by AP, zxzfcc*/
 	[BATT_USER_FCC]	= POWER_SUPPLY_PROP_USER_FCC,
+	[BATT_SHIP_MODE]	= POWER_SUPPLY_PROP_SHIP_MODE,
 	#endif
 };
 

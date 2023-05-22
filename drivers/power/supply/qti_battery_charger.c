@@ -1165,6 +1165,10 @@ static int battery_psy_set_ship_mode(struct battery_chg_dev *bcdev, int val)
 {
 	int rc = 0;
 	u32 ship_mode = val;
+	/*zxz add ,adsp need the value is 0 '#define BATTMNGR_SHIP_MODE_PMIC  0 ' ,  so we force the val to 0 here, if 
+	user set ship mode .
+	*/
+	ship_mode = 0;
 	rc = write_property_id(bcdev, &bcdev->psy_list[PSY_TYPE_BATTERY], BATT_SHIP_MODE, ship_mode);
     if (rc < 0) {
 		pr_err("%s: Failed to set ship_mode %u, rc=%d\n", __func__, ship_mode, rc);

@@ -97,19 +97,55 @@ static ssize_t goodix_ts_config_type_store(struct device *dev,
 
 static int usb_online,usb_if_err=0;
 struct goodix_ts_core *global_core_data;
+const u32 CUSTOM_ADDR= 0x10180;
+const static unsigned char CUSTOM_USB_ONLINE_BUF[2][6]=
+{
+	{0x00, 0x00, 0x04, 0x10, 0x14, 0x00},
+    {0x00, 0x00, 0x04, 0x11, 0x15, 0x00},
+};
+const static unsigned char CUSTOM_SCREEN_BUF[3][8]=
+{
+	{0x00, 0x00, 0x06, 0x17, 0x30, 0x00, 0x4D, 0x00},
+	{0x00, 0x00, 0x06, 0x17, 0x70, 0x01, 0x8E, 0x00},
+	{0x00, 0x00, 0x06, 0x17, 0xB0, 0x01, 0xCE, 0x00},
+};
 void tp_get_usb_online(int online)
 {
 	int ret = 0;
 
 	if (usb_online != online){
-		if(online)
+		if(online){
 			ret = goodix_ts_switch_config(global_core_data, (enum GOODIX_IC_CONFIG_TYPE)CFG_TYPE_CHARGE);			//charging mode
-		else
+			if(ret)
+				ts_debug("goodix switch charge config error,ret=[%d]!",ret);
+
+			ts_debug("ready for sending cmd ......");
+			ret = global_core_data->hw_ops->write(	global_core_data,
+													CUSTOM_ADDR,
+													(unsigned char *)&CUSTOM_USB_ONLINE_BUF[GOODIX_CUSTOM_CHARGE_CMD],
+													sizeof(CUSTOM_USB_ONLINE_BUF[GOODIX_CUSTOM_CHARGE_CMD]));
+			if(ret)
+				ts_debug("goodix write charge command error,ret=[%d]!",ret);										
+		}else{
 			ret = goodix_ts_switch_config(global_core_data, (enum GOODIX_IC_CONFIG_TYPE)CFG_TYPE_NON_CHARGE);		//Non charging mode
+			if(ret)
+				ts_debug("goodix switch noncharge config error,ret=[%d]!",ret);
+
+			ts_debug("ready for sending cmd ......");
+			ret = global_core_data->hw_ops->write(	global_core_data,
+													CUSTOM_ADDR,
+													(unsigned char *)&CUSTOM_USB_ONLINE_BUF[GOODIX_CUSTOM_NONCHARGE_CMD],
+													sizeof(CUSTOM_USB_ONLINE_BUF[GOODIX_CUSTOM_NONCHARGE_CMD]));
+			if(ret)
+				ts_debug("goodix write noncharge command error,ret=[%d]!",ret);													
+		}
 
 		if(ret){
 			usb_if_err = -EPERM;
 			ts_err("usb change touch config fail, error flage=[%d]!\n",usb_if_err);
+		}else{
+			usb_if_err = 0;
+			ts_info("Regardless of the previous state, as long as the switch is successful, it will be cleared...");
 		}
 
 		usb_online = online;
@@ -119,6 +155,60 @@ void tp_get_usb_online(int online)
 
 }
 EXPORT_SYMBOL_GPL(tp_get_usb_online);
+
+static u8 screen_mode=0;
+/* screen mode show */
+static ssize_t goodix_ts_screen_mode_show(struct device *dev,
+				       struct device_attribute *attr,
+				       char *buf)
+{
+	int cnt = 0;
+
+	cnt = snprintf(buf, PAGE_SIZE, "screen mode:%s\n",
+	screen_mode==0 ? "VERTICAL" : screen_mode==1 ? "HORIZONTAL_90" : "HORIZONTAL_270");
+
+	return cnt;
+}
+
+/* screen mode store */
+static ssize_t goodix_ts_screen_mode_store(struct device *dev,
+					struct device_attribute *attr,
+					const char *buf, size_t count)
+{
+	struct goodix_ts_core *core_data = dev_get_drvdata(dev);
+	struct goodix_ts_hw_ops *hw_ops = core_data->hw_ops;
+	int ret = 0;
+
+	if (!buf || count <= 0)
+		return -EINVAL;
+
+	if (buf[0] == '0'){
+		screen_mode = GOODIX_CUSTOM_VERTICAL_SCREEN_CMD;
+		ret = hw_ops->write(core_data,
+							CUSTOM_ADDR,
+							(unsigned char *)&CUSTOM_SCREEN_BUF[GOODIX_CUSTOM_VERTICAL_SCREEN_CMD],
+							sizeof(CUSTOM_SCREEN_BUF[GOODIX_CUSTOM_VERTICAL_SCREEN_CMD]));
+		ts_info("The current mode is VERTICAL!\n");							
+	}else if(buf[0] == '1'){
+		screen_mode = GOODIX_CUSTOM_HORIZONTAL_90_SCREEN_CMD;
+		ret = hw_ops->write(core_data,
+							CUSTOM_ADDR,
+							(unsigned char *)&CUSTOM_SCREEN_BUF[GOODIX_CUSTOM_HORIZONTAL_90_SCREEN_CMD],
+							sizeof(CUSTOM_SCREEN_BUF[GOODIX_CUSTOM_HORIZONTAL_90_SCREEN_CMD]));
+		ts_info("The current mode is HORIZONTAL_90!\n");
+	}else if(buf[0] == '2'){
+		screen_mode = GOODIX_CUSTOM_HORIZONTAL_270_SCREEN_CMD;
+		ret = hw_ops->write(core_data,
+							CUSTOM_ADDR,
+							(unsigned char *)&CUSTOM_SCREEN_BUF[GOODIX_CUSTOM_HORIZONTAL_270_SCREEN_CMD],
+							sizeof(CUSTOM_SCREEN_BUF[GOODIX_CUSTOM_HORIZONTAL_270_SCREEN_CMD]));
+		ts_info("The current mode is HORIZONTAL_270!\n");					
+	}else{
+		ts_err("Invalid parameter value!\n");
+	}
+
+	return count;
+}
 #endif
 /*Add by T2M-mingwu.zhang [End]*/
 
@@ -937,6 +1027,8 @@ static DEVICE_ATTR(die_info, 0440,
 		die_info_show, NULL);
 static DEVICE_ATTR(config_type, 0220,
 		NULL, goodix_ts_config_type_store);
+static DEVICE_ATTR(screen_mode, 0664,
+		goodix_ts_screen_mode_show, goodix_ts_screen_mode_store);		
 
 static struct attribute *sysfs_attrs[] = {
 	&dev_attr_driver_info.attr,
@@ -950,6 +1042,7 @@ static struct attribute *sysfs_attrs[] = {
 	&dev_attr_debug_log.attr,
 	&dev_attr_die_info.attr,
 	&dev_attr_config_type.attr,
+	&dev_attr_screen_mode.attr,
 	NULL,
 };
 
@@ -2057,10 +2150,31 @@ out:
 /*Add by T2M-mingwu.zhang for FP5-187 remarks: Touch parameter scene differentiation.[Begin]*/
 	if(usb_if_err){	
 		usb_if_err = 0;
-		if(usb_online)
+		if(usb_online){
 			ret = goodix_ts_switch_config(global_core_data, (enum GOODIX_IC_CONFIG_TYPE)CFG_TYPE_CHARGE);			//charging mode
-		else
+			if(ret)
+				ts_debug("goodix switch charge config error,ret=[%d]!",ret);
+
+			ts_debug("ready for sending cmd ......");
+			ret = global_core_data->hw_ops->write(	global_core_data,
+													CUSTOM_ADDR,
+													(unsigned char *)&CUSTOM_USB_ONLINE_BUF[GOODIX_CUSTOM_CHARGE_CMD],
+													sizeof(CUSTOM_USB_ONLINE_BUF[GOODIX_CUSTOM_CHARGE_CMD]));
+			if(ret)
+				ts_debug("goodix write charge command error,ret=[%d]!",ret);										
+		}else{
 			ret = goodix_ts_switch_config(global_core_data, (enum GOODIX_IC_CONFIG_TYPE)CFG_TYPE_NON_CHARGE);		//Non charging mode
+			if(ret)
+				ts_debug("goodix switch noncharge config error,ret=[%d]!",ret);
+
+			ts_debug("ready for sending cmd ......");
+			ret = global_core_data->hw_ops->write(	global_core_data,
+													CUSTOM_ADDR,
+													(unsigned char *)&CUSTOM_USB_ONLINE_BUF[GOODIX_CUSTOM_NONCHARGE_CMD],
+													sizeof(CUSTOM_USB_ONLINE_BUF[GOODIX_CUSTOM_NONCHARGE_CMD]));
+			if(ret)
+				ts_debug("goodix write noncharge command error,ret=[%d]!",ret);													
+		}
 
 		ts_info("resume ret=[%d]!\n",ret);
 		if(ret){
@@ -2389,6 +2503,17 @@ static int goodix_later_init_thread(void *data)
 	goodix_send_ic_config(cd, CONFIG_TYPE_NORMAL);
 	cd->config_type = CONFIG_TYPE_NORMAL;
 
+/*Add by T2M-mingwu.zhang for FP5-187 remarks: Touch parameter scene differentiation.[Begin]*/
+#ifdef CONFIG_PROJECT_FP5
+	ret = cd->hw_ops->write(cd,
+							CUSTOM_ADDR,
+							(unsigned char *)&CUSTOM_USB_ONLINE_BUF[GOODIX_CUSTOM_CHARGE_CMD],
+							sizeof(CUSTOM_USB_ONLINE_BUF[GOODIX_CUSTOM_CHARGE_CMD]));
+	if(ret)
+		ts_err("goodix write charge command error,ret=[%d]!",ret);
+#endif
+/*Add by T2M-mingwu.zhang [End]*/		
+
 	/* init other resources */
 	ret = goodix_ts_stage2_init(cd);
 	if (ret) {
@@ -2536,6 +2661,7 @@ static int goodix_ts_probe(struct platform_device *pdev)
 #ifdef CONFIG_PROJECT_FP5
 	global_core_data = core_data;
 	usb_online = CFG_TYPE_CHARGE;
+	screen_mode = GOODIX_CUSTOM_VERTICAL_SCREEN_CMD;
 #endif
 /*Add by T2M-mingwu.zhang [End]*/
 

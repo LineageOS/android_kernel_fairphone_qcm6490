@@ -57,7 +57,7 @@ void ptn_orientation_switch(int orientation, bool enable)
 {
 	pr_err("%s: orientation=%d enable = %d\n", __func__, orientation,enable);
 	if (orientation == 0) {
-		ptn_write_reg(0x0b, 0x01);
+		ptn_write_reg(0x0b, 0x00); //enter deep power-saving mode when DP connector plug out
 	} else if (orientation == 1) {
 		//ptn_write_reg(0x0b, 0x01);
 		//gpio_direction_output(aux_switch_gpio, 0); //zxz notice it 
@@ -77,8 +77,10 @@ void ptn_usb_orientation_switch(int orientation)
 
 	if (orientation == 1)
 		ptn_write_reg(0x0b, 0x01);
-	else
+	else if (orientation == 2)
 		ptn_write_reg(0x0b, 0x21);
+	else if (orientation == 0)
+		ptn_write_reg(0x0b, 0x00); //enter deep power-saving mode when USB plug out
 }
 EXPORT_SYMBOL(ptn_usb_orientation_switch);
 

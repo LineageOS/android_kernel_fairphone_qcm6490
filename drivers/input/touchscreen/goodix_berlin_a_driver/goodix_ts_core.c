@@ -96,6 +96,7 @@ static ssize_t goodix_ts_config_type_store(struct device *dev,
 }
 
 static int usb_online,usb_if_err=0;
+static bool usb_if_exist=false;
 struct goodix_ts_core *global_core_data;
 const u32 CUSTOM_ADDR= 0x10180;
 const static unsigned char CUSTOM_USB_ONLINE_BUF[2][6]=
@@ -112,6 +113,11 @@ const static unsigned char CUSTOM_SCREEN_BUF[3][8]=
 void tp_get_usb_online(int online)
 {
 	int ret = 0;
+
+	if(usb_if_exist != true){
+		ts_err("The specified touch panel does not exist!\n");
+		goto non_exist;
+	} 
 
 	if (usb_online != online){
 		if(online){
@@ -153,6 +159,8 @@ void tp_get_usb_online(int online)
 	}else
 		ts_info("tp get usb online ,state is same not changed! \n");
 
+non_exist:
+	ts_err("USB online finish^^^usb_if_exist=[%d]\n",usb_if_exist);
 }
 EXPORT_SYMBOL_GPL(tp_get_usb_online);
 
@@ -2148,7 +2156,7 @@ static int goodix_ts_resume(struct goodix_ts_core *core_data)
 
 out:
 /*Add by T2M-mingwu.zhang for FP5-187 remarks: Touch parameter scene differentiation.[Begin]*/
-	if(usb_if_err){	
+	if(usb_if_err && (usb_if_exist != false)){	
 		usb_if_err = 0;
 		if(usb_online){
 			ret = goodix_ts_switch_config(global_core_data, (enum GOODIX_IC_CONFIG_TYPE)CFG_TYPE_CHARGE);			//charging mode
@@ -2662,6 +2670,7 @@ static int goodix_ts_probe(struct platform_device *pdev)
 	global_core_data = core_data;
 	usb_online = CFG_TYPE_CHARGE;
 	screen_mode = GOODIX_CUSTOM_VERTICAL_SCREEN_CMD;
+	usb_if_exist=true;
 #endif
 /*Add by T2M-mingwu.zhang [End]*/
 

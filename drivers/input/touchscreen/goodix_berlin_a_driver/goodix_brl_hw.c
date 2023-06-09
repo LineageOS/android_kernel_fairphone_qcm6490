@@ -235,24 +235,26 @@ static int brl_power_on(struct goodix_ts_core *cd, bool on)
 
 ts_err("zmw---brl_power_on---op");
 	if (on) {
-		if (avdd_gpio > 0) {
-			gpio_direction_output(avdd_gpio, 1);
-		} else if (cd->avdd) {
-			ret = regulator_enable(cd->avdd);			
+		if (iovdd_gpio > 0) {
+			gpio_direction_output(iovdd_gpio, 1);
+		} else if (cd->iovdd) {			
+			ret = regulator_enable(cd->iovdd);
+ts_err("zmw:name=[%s] line=[%d] iovdd \n",__func__,__LINE__);			
 			if (ret < 0) {
-				ts_err("Failed to enable avdd:%d", ret);
+				ts_err("Failed to enable iovdd:%d", ret);
 				goto power_off;
 			}
 		}
 
 		usleep_range(3000, 3100);
-		
-		if (iovdd_gpio > 0) {
-			gpio_direction_output(iovdd_gpio, 1);
-		} else if (cd->iovdd) {			
-			ret = regulator_enable(cd->iovdd);
+
+		if (avdd_gpio > 0) {
+			gpio_direction_output(avdd_gpio, 1);
+		} else if (cd->avdd) {
+			ret = regulator_enable(cd->avdd);	
+ts_err("zmw:name=[%s] line=[%d] avdd \n",__func__,__LINE__);					
 			if (ret < 0) {
-				ts_err("Failed to enable iovdd:%d", ret);
+				ts_err("Failed to enable avdd:%d", ret);
 				goto power_off;
 			}
 		}

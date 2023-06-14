@@ -1232,7 +1232,7 @@ static int _iris_esd_read(void)
 		uint32_t val;
 
 		rc = iris_ioctl_i2c_read(IRIS_RUN_STATUS, &val);
-		run_status = val & 0x3;
+		run_status = val & 0x1;
 
 		if ((iris_esd_ctrl_get() & 0x8) || IRIS_IF_LOGD()) {
 			IRIS_LOGI("i2c read iris esd value: 0x%0x. run_status:0x%x. rc:%d",
@@ -1261,7 +1261,7 @@ static int _iris_esd_read(void)
 		rc = iris_dsi_send_cmds(pcfg->panel, cmdset.cmds, cmdset.count,
 								cmdset.state, pcfg->vc_ctrl.to_iris_vc_id);
 
-		run_status = rbuf[1] & 0x3;
+		run_status = rbuf[1] & 0x1;
 		if ((iris_esd_ctrl_get() & 0x8) || IRIS_IF_LOGD()) {
 			IRIS_LOGI("dsi read iris esd value: 0x%02x 0x%02x. run_status:0x%x. rc:%d.",
 					  rbuf[0], rbuf[1], run_status, rc);

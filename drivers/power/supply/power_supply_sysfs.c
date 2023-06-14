@@ -159,6 +159,7 @@ static struct power_supply_attr power_supply_attrs[] = {
 	#ifdef CONFIG_QGKI
 	POWER_SUPPLY_ATTR(RESISTANCE_ID), /* zxzid add for battery resistance id */
 	POWER_SUPPLY_ATTR(USER_FCC), /*Add by T2M.zhangxianzhu for setting FCC by AP, zxzfcc*/
+	POWER_SUPPLY_ATTR(DISPLAY_FCC),
 	POWER_SUPPLY_ATTR(SHIP_MODE), /*FP5-839 Add by T2M.zhangxianzhu for setting ship mode by AP, zxzshipmode*/
 	#endif
 	POWER_SUPPLY_ATTR(CHARGE_FULL_DESIGN),

@@ -420,7 +420,7 @@ static int brl_send_cmd(struct goodix_ts_core *cd,
 				ts_err("failed read command ack, %d", ret);
 				goto exit;
 			}
-			ts_err("cmd ack data %*ph",
+			ts_debug("cmd ack data %*ph",
 				 (int)sizeof(cmd_ack), cmd_ack.buf);
 			if (cmd_ack.ack == CMD_ACK_OK) {
 				msleep(40);		// wait for cmd response

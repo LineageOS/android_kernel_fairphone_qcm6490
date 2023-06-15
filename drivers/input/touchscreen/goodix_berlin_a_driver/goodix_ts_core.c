@@ -36,6 +36,23 @@ int core_module_prob_sate = CORE_MODULE_UNPROBED;
 
 /*Add by T2M-mingwu.zhang for FP5-187 remarks: Touch parameter scene differentiation.[Begin]*/
 #ifdef CONFIG_PROJECT_FP5
+static int usb_if_err=0;
+static bool tp_if_exist=false;
+static bool tp_if_suspend=false;
+struct goodix_ts_core *global_core_data;
+const u32 CUSTOM_ADDR= 0x10180;
+const static unsigned char CUSTOM_USB_ONLINE_BUF[2][6]=
+{
+	{0x00, 0x00, 0x04, 0x10, 0x14, 0x00},
+    {0x00, 0x00, 0x04, 0x11, 0x15, 0x00},
+};
+const static unsigned char CUSTOM_SCREEN_BUF[3][8]=
+{
+	{0x00, 0x00, 0x06, 0x17, 0x30, 0x00, 0x4D, 0x00},
+	{0x00, 0x00, 0x06, 0x17, 0x70, 0x01, 0x8E, 0x00},
+	{0x00, 0x00, 0x06, 0x17, 0xB0, 0x01, 0xCE, 0x00},
+};
+
 static DEFINE_MUTEX(config_type_mutex);
 static int goodix_ts_switch_config(struct goodix_ts_core *cd, enum GOODIX_IC_CONFIG_TYPE type)
 {
@@ -49,7 +66,7 @@ static int goodix_ts_switch_config(struct goodix_ts_core *cd, enum GOODIX_IC_CON
 		return -EINVAL;
 	}
 
-	mutex_lock(&config_type_mutex);
+//	mutex_lock(&config_type_mutex);
 	hw_ops->irq_enable(cd, false);
 
 	if (hw_ops->send_config) {
@@ -58,8 +75,26 @@ static int goodix_ts_switch_config(struct goodix_ts_core *cd, enum GOODIX_IC_CON
 			cd->config_type = type;
 	}
 
+	if (type == CFG_TYPE_CHARGE) {
+		ts_debug("ready for sending charge cmd ......");
+		ret = cd->hw_ops->write(cd,
+								CUSTOM_ADDR,
+								(unsigned char *)&CUSTOM_USB_ONLINE_BUF[GOODIX_CUSTOM_CHARGE_CMD],
+								sizeof(CUSTOM_USB_ONLINE_BUF[GOODIX_CUSTOM_CHARGE_CMD]));
+		if(ret)
+			ts_debug("goodix write charge command error,ret=[%d]!",ret);
+	} else {
+		ts_debug("ready for sending nochange cmd ......");
+		ret = cd->hw_ops->write(cd,
+								CUSTOM_ADDR,
+								(unsigned char *)&CUSTOM_USB_ONLINE_BUF[GOODIX_CUSTOM_NONCHARGE_CMD],
+								sizeof(CUSTOM_USB_ONLINE_BUF[GOODIX_CUSTOM_NONCHARGE_CMD]));
+		if(ret)
+			ts_debug("goodix write noncharge command error,ret=[%d]!",ret);		
+	}
+
 	hw_ops->irq_enable(cd, true);
-	mutex_unlock(&config_type_mutex);
+//	mutex_unlock(&config_type_mutex);
 
 	return ret;
 }
@@ -95,72 +130,64 @@ static ssize_t goodix_ts_config_type_store(struct device *dev,
 	return ret ? -EINVAL : count;
 }
 
-static int usb_online,usb_if_err=0;
-static bool usb_if_exist=false;
-struct goodix_ts_core *global_core_data;
-const u32 CUSTOM_ADDR= 0x10180;
-const static unsigned char CUSTOM_USB_ONLINE_BUF[2][6]=
+static void goodix_tpusb_online(struct work_struct *work)
 {
-	{0x00, 0x00, 0x04, 0x10, 0x14, 0x00},
-    {0x00, 0x00, 0x04, 0x11, 0x15, 0x00},
-};
-const static unsigned char CUSTOM_SCREEN_BUF[3][8]=
-{
-	{0x00, 0x00, 0x06, 0x17, 0x30, 0x00, 0x4D, 0x00},
-	{0x00, 0x00, 0x06, 0x17, 0x70, 0x01, 0x8E, 0x00},
-	{0x00, 0x00, 0x06, 0x17, 0xB0, 0x01, 0xCE, 0x00},
-};
-void tp_get_usb_online(int online)
-{
+	struct goodix_ts_core *cd =
+			container_of(work, struct goodix_ts_core, tpusb_online_work);
 	int ret = 0;
 
-	if(usb_if_exist != true){
+	mutex_lock(&config_type_mutex);
+
+	if(tp_if_suspend != false)
+		goto Nothing_happened;
+
+	ts_err("usb_online=[%d]!\n",atomic_read(&cd->usb_online));
+
+	if(atomic_read(&cd->usb_online)){
+		ret = goodix_ts_switch_config(cd, (enum GOODIX_IC_CONFIG_TYPE)CFG_TYPE_CHARGE);			//charging mode
+		if(ret)
+			ts_debug("goodix switch charge config error,ret=[%d]!",ret);									
+	}else{
+		ret = goodix_ts_switch_config(cd, (enum GOODIX_IC_CONFIG_TYPE)CFG_TYPE_NON_CHARGE);		//Non charging mode
+		if(ret)
+			ts_debug("goodix switch noncharge config error,ret=[%d]!",ret);										
+	}
+
+	if(ret){
+		if(usb_if_err){
+			usb_if_err = -EAGAIN; //recover error flage
+			ts_err("resume touch config fail, keep error flage=[%d]!\n",usb_if_err);
+		}else{
+			usb_if_err = -EPERM;
+			ts_err("usb touch config fail, error flage=[%d]!\n",usb_if_err);
+		}
+	}else{
+		usb_if_err = 0;
+		ts_info("Regardless of the previous state, as long as the switch is successful, it will be cleared...");
+	}
+
+Nothing_happened:
+	mutex_unlock(&config_type_mutex);	
+}
+
+static DEFINE_MUTEX(usb_online_mutex);
+void tp_get_usb_online(int online)
+{
+	mutex_lock(&usb_online_mutex);
+	if(tp_if_exist != true){
 		ts_err("The specified touch panel does not exist!\n");
 		goto non_exist;
 	} 
 
-	if (usb_online != online){
-		if(online){
-			ret = goodix_ts_switch_config(global_core_data, (enum GOODIX_IC_CONFIG_TYPE)CFG_TYPE_CHARGE);			//charging mode
-			if(ret)
-				ts_debug("goodix switch charge config error,ret=[%d]!",ret);
-
-			ts_debug("ready for sending cmd ......");
-			ret = global_core_data->hw_ops->write(	global_core_data,
-													CUSTOM_ADDR,
-													(unsigned char *)&CUSTOM_USB_ONLINE_BUF[GOODIX_CUSTOM_CHARGE_CMD],
-													sizeof(CUSTOM_USB_ONLINE_BUF[GOODIX_CUSTOM_CHARGE_CMD]));
-			if(ret)
-				ts_debug("goodix write charge command error,ret=[%d]!",ret);										
-		}else{
-			ret = goodix_ts_switch_config(global_core_data, (enum GOODIX_IC_CONFIG_TYPE)CFG_TYPE_NON_CHARGE);		//Non charging mode
-			if(ret)
-				ts_debug("goodix switch noncharge config error,ret=[%d]!",ret);
-
-			ts_debug("ready for sending cmd ......");
-			ret = global_core_data->hw_ops->write(	global_core_data,
-													CUSTOM_ADDR,
-													(unsigned char *)&CUSTOM_USB_ONLINE_BUF[GOODIX_CUSTOM_NONCHARGE_CMD],
-													sizeof(CUSTOM_USB_ONLINE_BUF[GOODIX_CUSTOM_NONCHARGE_CMD]));
-			if(ret)
-				ts_debug("goodix write noncharge command error,ret=[%d]!",ret);													
-		}
-
-		if(ret){
-			usb_if_err = -EPERM;
-			ts_err("usb change touch config fail, error flage=[%d]!\n",usb_if_err);
-		}else{
-			usb_if_err = 0;
-			ts_info("Regardless of the previous state, as long as the switch is successful, it will be cleared...");
-		}
-
-		usb_online = online;
-		ts_err("tp get usb online ,online=[%d]!\n",online);
+	if (atomic_read(&global_core_data->usb_online) != online){
+		atomic_set(&global_core_data->usb_online,online);
+		schedule_work(&global_core_data->tpusb_online_work);		
 	}else
 		ts_info("tp get usb online ,state is same not changed! \n");
 
 non_exist:
-	ts_err("USB online finish^^^usb_if_exist=[%d]\n",usb_if_exist);
+	ts_debug("USB online finish,tp_if_exist=[%d]\n",tp_if_exist);
+	mutex_unlock(&usb_online_mutex);	
 }
 EXPORT_SYMBOL_GPL(tp_get_usb_online);
 
@@ -2084,6 +2111,13 @@ static int goodix_ts_suspend(struct goodix_ts_core *core_data)
 
 out:
 	goodix_ts_release_connects(core_data);
+/*Add by T2M-mingwu.zhang for FP5-187 remarks: Touch parameter scene differentiation.[Begin]*/
+#ifdef CONFIG_PROJECT_FP5
+	usb_if_err = -EPERM;
+	tp_if_suspend = true;
+	ts_err("usb_if_err=[%d],tp_if_suspend=[%d]",usb_if_err,tp_if_suspend);
+#endif
+/*Add by T2M-mingwu.zhang [End]*/
 	ts_info("Suspend end");
 	return 0;
 }
@@ -2156,39 +2190,9 @@ static int goodix_ts_resume(struct goodix_ts_core *core_data)
 
 out:
 /*Add by T2M-mingwu.zhang for FP5-187 remarks: Touch parameter scene differentiation.[Begin]*/
-	if(usb_if_err && (usb_if_exist != false)){	
-		usb_if_err = 0;
-		if(usb_online){
-			ret = goodix_ts_switch_config(global_core_data, (enum GOODIX_IC_CONFIG_TYPE)CFG_TYPE_CHARGE);			//charging mode
-			if(ret)
-				ts_debug("goodix switch charge config error,ret=[%d]!",ret);
-
-			ts_debug("ready for sending cmd ......");
-			ret = global_core_data->hw_ops->write(	global_core_data,
-													CUSTOM_ADDR,
-													(unsigned char *)&CUSTOM_USB_ONLINE_BUF[GOODIX_CUSTOM_CHARGE_CMD],
-													sizeof(CUSTOM_USB_ONLINE_BUF[GOODIX_CUSTOM_CHARGE_CMD]));
-			if(ret)
-				ts_debug("goodix write charge command error,ret=[%d]!",ret);										
-		}else{
-			ret = goodix_ts_switch_config(global_core_data, (enum GOODIX_IC_CONFIG_TYPE)CFG_TYPE_NON_CHARGE);		//Non charging mode
-			if(ret)
-				ts_debug("goodix switch noncharge config error,ret=[%d]!",ret);
-
-			ts_debug("ready for sending cmd ......");
-			ret = global_core_data->hw_ops->write(	global_core_data,
-													CUSTOM_ADDR,
-													(unsigned char *)&CUSTOM_USB_ONLINE_BUF[GOODIX_CUSTOM_NONCHARGE_CMD],
-													sizeof(CUSTOM_USB_ONLINE_BUF[GOODIX_CUSTOM_NONCHARGE_CMD]));
-			if(ret)
-				ts_debug("goodix write noncharge command error,ret=[%d]!",ret);													
-		}
-
-		ts_info("resume ret=[%d]!\n",ret);
-		if(ret){
-			usb_if_err = -EAGAIN; //recover error flage
-			ts_err("resume change touch config fail, keep error flage=[%d]!\n",usb_if_err);
-		}			
+	if(tp_if_suspend && (tp_if_exist != false)){	
+		tp_if_suspend = false;	
+		schedule_work(&global_core_data->tpusb_online_work);		
 	}
 /*Add by T2M-mingwu.zhang [End]*/
 	/* enable irq */
@@ -2418,6 +2422,16 @@ int goodix_ts_stage2_init(struct goodix_ts_core *cd)
 	/* Do self check on first boot */
 	INIT_WORK(&cd->self_check_work, goodix_self_check);
 	schedule_work(&cd->self_check_work);
+
+/*Add by T2M-mingwu.zhang for FP5-187 remarks: Touch parameter scene differentiation.[Begin]*/
+#ifdef CONFIG_PROJECT_FP5
+	INIT_WORK(&cd->tpusb_online_work, goodix_tpusb_online);
+	global_core_data = cd;
+	atomic_set(&cd->usb_online,CFG_TYPE_CHARGE);
+	screen_mode = GOODIX_CUSTOM_VERTICAL_SCREEN_CMD;
+	tp_if_exist=true;
+#endif
+/*Add by T2M-mingwu.zhang [End]*/
 
 	return 0;
 exit:
@@ -2664,15 +2678,6 @@ static int goodix_ts_probe(struct platform_device *pdev)
 
 	/* Try start a thread to get config-bin info */
 	goodix_start_later_init(core_data);
-
-/*Add by T2M-mingwu.zhang for FP5-187 remarks: Touch parameter scene differentiation.[Begin]*/
-#ifdef CONFIG_PROJECT_FP5
-	global_core_data = core_data;
-	usb_online = CFG_TYPE_CHARGE;
-	screen_mode = GOODIX_CUSTOM_VERTICAL_SCREEN_CMD;
-	usb_if_exist=true;
-#endif
-/*Add by T2M-mingwu.zhang [End]*/
 
 	ts_info("goodix_ts_core probe success");
 	return 0;

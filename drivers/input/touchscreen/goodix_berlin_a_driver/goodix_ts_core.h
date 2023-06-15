@@ -39,6 +39,11 @@
 #include <linux/notifier.h>
 #include <linux/fb.h>
 #endif
+/*Add by T2M-mingwu.zhang for FP5-187 remarks: Touch parameter scene differentiation.[Begin]*/
+#ifdef CONFIG_PROJECT_FP5
+#include <asm/atomic.h>
+#endif
+/*Add by T2M-mingwu.zhang [End]*/
 
 /*Add by T2M-mingwu.zhang for FP5-538 remarks: TP/LCD Device Information Development.[Begin]*/	
 #ifdef CONFIG_EMKIT_INFO
@@ -708,6 +713,13 @@ struct goodix_ts_core {
 #if (IS_ENABLED(CONFIG_FB) || IS_ENABLED(CONFIG_DRM))
 	struct notifier_block fb_notifier;
 #endif
+
+/*Add by T2M-mingwu.zhang for FP5-187 remarks: Touch parameter scene differentiation.[Begin]*/
+#ifdef CONFIG_PROJECT_FP5
+	struct work_struct tpusb_online_work;
+	atomic_t usb_online;
+#endif
+/*Add by T2M-mingwu.zhang [End]*/
 };
 
 /* external module structures */

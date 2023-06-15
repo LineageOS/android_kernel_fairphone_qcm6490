@@ -1198,7 +1198,12 @@ static int battery_psy_set_ship_mode(struct battery_chg_dev *bcdev, int val)
 /*FP5-839 Add by T2M.zhangxianzhu,End */
 #endif
 
-
+/* [FP5-1322]-Add-BEGIN by T2M.zhuli 20230615 - Remap health value for upper layer need */
+#define JEITA_HARD_COLD_TEMP (50)
+#define JEITA_SOFT_COLD_TEMP (100)
+#define JEITA_SOFT_HOT_TEMP (450)
+#define JEITA_HARD_HOT_TEMP (550)
+/* [FP5-1322]-Add-END by T2M.zhuli */
 static int battery_psy_get_prop(struct power_supply *psy,
 		enum power_supply_property prop,
 		union power_supply_propval *pval)
@@ -1215,6 +1220,30 @@ static int battery_psy_get_prop(struct power_supply *psy,
 	 */
 	if (prop == POWER_SUPPLY_PROP_TIME_TO_FULL_NOW)
 		prop = POWER_SUPPLY_PROP_TIME_TO_FULL_AVG;
+/* [FP5-1322]-Add-BEGIN by T2M.zhuli 20230615 - Remap health value for upper layer need */
+	else if(prop == POWER_SUPPLY_PROP_HEALTH){
+		prop_id = get_property_id(pst, POWER_SUPPLY_PROP_TEMP);
+		if (prop_id < 0)
+			return prop_id;
+		rc = read_property_id(bcdev, pst, prop_id);
+		if (rc < 0)
+			return rc;
+		pval->intval = DIV_ROUND_CLOSEST((int)pst->prop[prop_id], 10);
+
+		if (pval->intval < JEITA_HARD_COLD_TEMP)
+			pval->intval = POWER_SUPPLY_HEALTH_COLD;
+		else if (pval->intval < JEITA_SOFT_COLD_TEMP)
+			pval->intval = POWER_SUPPLY_HEALTH_COOL;
+		else if (pval->intval < JEITA_SOFT_HOT_TEMP)
+			pval->intval = POWER_SUPPLY_HEALTH_GOOD;
+		else if (pval->intval < JEITA_HARD_HOT_TEMP)
+			pval->intval = POWER_SUPPLY_HEALTH_WARM;
+		else
+			pval->intval = POWER_SUPPLY_HEALTH_OVERHEAT;
+
+		return rc;
+	}
+/* [FP5-1322]-Add-END by T2M.zhuli */
 
 	prop_id = get_property_id(pst, prop);
 	if (prop_id < 0)

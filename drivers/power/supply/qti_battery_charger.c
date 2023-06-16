@@ -119,6 +119,9 @@ enum battery_property_id {
 	BATT_USER_FCC,//zxzfcc
 	BATT_DISPLAY_FCC,
 	BATT_SHIP_MODE,//FP5-839 zxzshipmode
+	#ifdef CHARGE_MODE_FCC_SUPPORT
+	BATT_CHGMODE_FCC,
+	#endif
 	#endif
 	BATT_PROP_MAX,
 };
@@ -317,6 +320,9 @@ static const int battery_prop_map[BATT_PROP_MAX] = {
 	[BATT_USER_FCC]	= POWER_SUPPLY_PROP_USER_FCC,
 	[BATT_DISPLAY_FCC]	= POWER_SUPPLY_PROP_DISPLAY_FCC,
 	[BATT_SHIP_MODE]	= POWER_SUPPLY_PROP_SHIP_MODE,
+	#ifdef CHARGE_MODE_FCC_SUPPORT
+	[BATT_CHGMODE_FCC]	= POWER_SUPPLY_PROP_CHGMODE_FCC,
+	#endif
 	#endif
 };
 
@@ -1177,6 +1183,23 @@ static int battery_psy_set_display_charge_current(struct battery_chg_dev *bcdev,
 
 }
 
+#ifdef CHARGE_MODE_FCC_SUPPORT
+#define SLOW_MODE_FCC 2000000 // 2A
+#define NORMAL_MODE_FCC 6000000 // 6A
+static int battery_psy_set_charge_current_by_chgmode(struct battery_chg_dev *bcdev, int val)
+{
+	int rc = 0;
+	u32 fcc_ua = ((val == SLOW_MODE_FCC) ? SLOW_MODE_FCC : NORMAL_MODE_FCC);
+	rc = write_property_id(bcdev, &bcdev->psy_list[PSY_TYPE_BATTERY], BATT_CHGMODE_FCC, fcc_ua);
+	if (rc < 0)
+		pr_err("%s: Failed to set FCC %u, rc=%d\n", __func__, fcc_ua, rc);
+	else
+		pr_info("%s: chgmode:%d, FCC: %u uA\n", __func__, val, fcc_ua);
+	return rc;
+
+}
+#endif
+
 /*FP5-839 Add by T2M.zhangxianzhu,add for set ship mode in AP, zxzshipmode ,Begin */
 static int battery_psy_set_ship_mode(struct battery_chg_dev *bcdev, int val)
 {
@@ -1296,6 +1319,10 @@ static int battery_psy_set_prop(struct power_supply *psy,
 		return battery_psy_set_display_charge_current(bcdev, pval->intval);
 	case POWER_SUPPLY_PROP_SHIP_MODE://FP5-839 zxzshipmode
 		return battery_psy_set_ship_mode(bcdev, pval->intval);
+#ifdef CHARGE_MODE_FCC_SUPPORT
+	case POWER_SUPPLY_PROP_CHGMODE_FCC:
+		return battery_psy_set_charge_current_by_chgmode(bcdev, pval->intval);
+#endif
 	#endif
 	default:
 		return -EINVAL;
@@ -1312,6 +1339,9 @@ static int battery_psy_prop_is_writeable(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_USER_FCC://zxzfcc
 	case POWER_SUPPLY_PROP_DISPLAY_FCC:
 	case POWER_SUPPLY_PROP_SHIP_MODE://FP5-839 zxzshipmode
+#ifdef CHARGE_MODE_FCC_SUPPORT
+	case POWER_SUPPLY_PROP_CHGMODE_FCC:
+#endif
 	#endif
 	case POWER_SUPPLY_PROP_CHARGE_CONTROL_LIMIT:
 		return 1;
@@ -1352,6 +1382,9 @@ static enum power_supply_property battery_props[] = {
 	POWER_SUPPLY_PROP_USER_FCC,//zxzfcc
 	POWER_SUPPLY_PROP_DISPLAY_FCC,
 	POWER_SUPPLY_PROP_SHIP_MODE,//FP5-839 zxzshipmode
+#ifdef CHARGE_MODE_FCC_SUPPORT
+	POWER_SUPPLY_PROP_CHGMODE_FCC,
+#endif
 	#endif
 };
 

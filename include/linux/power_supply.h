@@ -18,6 +18,10 @@
 #include <linux/spinlock.h>
 #include <linux/notifier.h>
 
+/* [FP5-101]-Add-BEGIN by T2M.zhuli 20230615 - Battery Charging Speed Options support*/
+#define CHARGE_MODE_FCC_SUPPORT
+/* [FP5-101]-Add-END by T2M.zhuli */
+
 /*
  * All voltages, currents, charges, energies, time and temperatures in uV,
  * µA, µAh, µWh, seconds and tenths of degree Celsius unless otherwise
@@ -121,6 +125,9 @@ enum power_supply_property {
 	POWER_SUPPLY_PROP_USER_FCC, /*Add by T2M.zhangxianzhu for setting FCC by AP, zxzfcc*/
 	POWER_SUPPLY_PROP_DISPLAY_FCC,
 	POWER_SUPPLY_PROP_SHIP_MODE, /*FP5-839 Add by T2M.zhangxianzhu for setting ship mode by AP, zxzshipmode*/
+	#ifdef CHARGE_MODE_FCC_SUPPORT
+	POWER_SUPPLY_PROP_CHGMODE_FCC,
+	#endif
 	#endif
 	POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN,
 	POWER_SUPPLY_PROP_CHARGE_EMPTY_DESIGN,

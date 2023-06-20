@@ -823,7 +823,7 @@ static void stm_init_default_data(struct stm_drvdata *drvdata)
 	 * also reserved the STM trace ID needs to be higher than number
 	 * of cpu i.e 0x8 in our case and lower than 0x70.
 	 */
-	drvdata->traceid = 0x10;
+	drvdata->traceid = 0x1;
 
 	/* Set invariant transaction timing on all channels */
 	bitmap_clear(drvdata->chs.guaranteed, 0, drvdata->numsp);

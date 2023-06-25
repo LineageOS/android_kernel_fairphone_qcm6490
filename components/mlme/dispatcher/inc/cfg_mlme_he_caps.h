@@ -667,7 +667,7 @@
 				"cfg_he_ops_basic_mcs_nss", \
 				0x0000, \
 				0xFFFF, \
-				0xFFFA, \
+				0xFFFC, \
 				CFG_VALUE_OR_DEFAULT, \
 				"He Ops Basic Mcs NSS")
 

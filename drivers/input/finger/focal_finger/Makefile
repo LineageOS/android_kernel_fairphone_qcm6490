@@ -15,4 +15,4 @@
 
 # Source files.
 obj-$(CONFIG_FINGER_FOCAL) := focaltech_fp.o
-focaltech_fp-objs 	:= ff_core.o
+focaltech_fp-y 	:= ff_core.o

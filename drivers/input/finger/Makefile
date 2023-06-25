@@ -1,3 +1,3 @@
 
 
-obj-$(CONFIG_FINGER_FOCAL) += focal_finger/
+obj-$(CONFIG_INPUT_FINGERPRINT) += focal_finger/

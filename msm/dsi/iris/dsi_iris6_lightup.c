@@ -1966,15 +1966,14 @@ int iris_parse_param(struct device_node *np, struct dsi_panel *panel)
 
 	INIT_WORK(&pcfg->cont_splash_work, __iris_cont_splash_work_handler);
 
-	//if (strnstr(saved_command_line, "androidboot.mode=", strlen(saved_command_line)) != NULL) {
-	if (0) {
-		IRIS_LOGI("%s(%d), saved_command_line: %s", __func__, __LINE__, saved_command_line);
-		pcfg->iris_isolate_status = 1;
-		pcfg->valid = PARAM_NONE;
-	} else {
-		pcfg->iris_isolate_status = 0;
-		pcfg->valid = PARAM_PARSED;
-	}
+  if (strnstr(saved_command_line, "androidboot.mode=", strlen(saved_command_line)) != NULL) {
+          IRIS_LOGI("%s(%d), saved_command_line: %s", __func__, __LINE__, saved_command_line);
+          pcfg->iris_isolate_status = 1;
+	pcfg->valid = PARAM_NONE;
+  } else {
+          pcfg->iris_isolate_status = 0;
+	pcfg->valid = PARAM_PARSED;
+  }
 	IRIS_LOGI("%s(%d), exit.", __func__, __LINE__);
 
 	return 0;

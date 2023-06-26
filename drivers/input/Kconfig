@@ -185,12 +185,6 @@ config INPUT_APMPOWER
 	  To compile this driver as a module, choose M here: the
 	  module will be called apm-power.
 
-config FINGER_FOCAL
-	bool "Provide driver /finggerprint/ device"
-	help
-	  Say Y here if you want use fingerprint  as char device
-	  If unsure, say Y.     
-
 comment "Input Device Drivers"
 
 source "drivers/input/keyboard/Kconfig"

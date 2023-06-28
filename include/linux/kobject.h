@@ -30,7 +30,18 @@
 #include <linux/android_kabi.h>
 
 #define UEVENT_HELPER_PATH_LEN		256
+
+/* [FP5-1989] [Battery]Battery level will jump while playing videos ,2023-06-28 ,zhangxianzhu add begin
+have add_uevent_var: too many keys  error logs ,so battery level will missing report .
+if change this code ,need build whole code ,can not only bootimage (device will can not bootup )
+*/
+#ifdef CONFIG_QGKI
+#define UEVENT_NUM_ENVP			48	/* number of env pointers */
+#else
 #define UEVENT_NUM_ENVP			32	/* number of env pointers */
+#endif
+
+/* [FP5-1989] [Battery]Battery level will jump while playing videos ,2023-06-28 ,zhangxianzhu add end*/
 #define UEVENT_BUFFER_SIZE		2048	/* buffer for the variables */
 
 #ifdef CONFIG_UEVENT_HELPER

@@ -12,6 +12,11 @@
 #include "cam_common_util.h"
 #include "cam_packet_util.h"
 
+/*Begin zihao.li for [Task][FP5-162] FP5 add camera deviceinfo on 20230331*/
+extern unsigned char CamNameB[128]; //Rear camera
+extern unsigned char CamNameF[128]; //Front camera
+extern unsigned char CamNameB2[128];//Wide camera
+/*End   zihao.li for [Task][FP5-162] FP5 add camera deviceinfo on 20230331*/
 
 static int cam_sensor_update_req_mgr(
 	struct cam_sensor_ctrl_t *s_ctrl,
@@ -700,6 +705,25 @@ int cam_sensor_match_id(struct cam_sensor_ctrl_t *s_ctrl)
 				chipid, slave_info->sensor_id);
 		return -ENODEV;
 	}
+
+	/*Begin zihao.li for [Task][FP5-162] FP5 add camera deviceinfo on 20230331*/
+	CAM_INFO(CAM_SENSOR, "Camera probe state:%d, deviceinfo sensorId(0x%x)",
+			s_ctrl->is_probe_succeed, chipid);
+
+	if(chipid == 0x0800) {
+		strcpy(CamNameB, "SONY_IMX800");
+	}
+	else if(chipid == 0x38E1) {
+		strcpy(CamNameF, "SAMSUNG_S5KJN1");
+	}
+	else if(chipid == 0x0858) {
+		strcpy(CamNameB2, "SONY_IMX858");
+	}
+	else {
+		CAM_ERR(CAM_SENSOR, "FP5 Invalid sensor id %d", chipid);
+	}
+	/*End   zihao.li for [Task][FP5-162] FP5 add camera deviceinfo on 20230331*/
+
 	return rc;
 }
 

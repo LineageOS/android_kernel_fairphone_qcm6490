@@ -68,6 +68,3 @@ obj-$(CONFIG_HISI_HIKEY_USB)	+= hisi_hikey_usb.o
 obj-$(CONFIG_AWINIC_HAPTIC_HV)	+= haptic_hv/
 obj-$(CONFIG_BSP_PUBLIC_INTERFACES)	+= bsp_public_interfaces.o
 obj-$(CONFIG_USB_REDRIVER_PTN36502)	+= ptn36502.o
-#Begin zihao.li for [Task][FP5-162] FP5 add camera deviceinfo kernel node  on 20230209
-obj-y += deviceinfo.o
-#End   zihao.li for [Task][FP5-162] FP5 add camera deviceinfo kernel node  on 20230209

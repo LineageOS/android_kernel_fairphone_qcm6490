@@ -1084,12 +1084,10 @@ static int convert_ic_info_v2(struct goodix_ts_core *cd, const u8 *data)
 
 	// sub version
 	data += 4;
-	info_v2->version.length = le16_to_cpup((__le16 *)data);
-	memcpy((u8 *)&info_v2->version, data, info_v2->version.length);
+	memcpy((u8 *)&info_v2->version, data, sizeof(info_v2->version));
 
 	// sub sample
-	data += info_v2->version.length;
-	info_v2->sample.length = le16_to_cpup((__le16 *)data);
+	data += sizeof(info_v2->version);
 	memcpy((u8 *)&info_v2->sample, data, 16);
 
 	data += 16;
@@ -1153,14 +1151,11 @@ static int convert_ic_info_v2(struct goodix_ts_core *cd, const u8 *data)
 		info_v2->sample.stylus_tx2_freq[i] = le16_to_cpup((__le16 *)(data + i * 2));
 
 	// sub address
-	data += info_v2->sample.stylus_tx2_freq_num * 2;
-	info_v2->address.length = le16_to_cpup((__le16 *)data);
-	memcpy((u8 *)&info_v2->address, data, info_v2->address.length);
+	memcpy((u8 *)&info_v2->address, data, sizeof(info_v2->address));
 
 	// sub customer
-	data += info_v2->address.length;
-	info_v2->customer.length = le16_to_cpup((__le16 *)data);
-	memcpy((u8 *)&info_v2->customer, data, info_v2->customer.length);
+	data += sizeof(info_v2->address);
+	memcpy((u8 *)&info_v2->customer, data, sizeof(info_v2->customer));
 
 	goodix_compatible_ic_info(cd);
 	return 0;
@@ -1222,6 +1217,7 @@ static int brl_get_ic_info(struct goodix_ts_core *cd,
 	}
 
 	info_ver = afe_data[3];
+ts_err("zmw:name=[%s] line=[%d] info_ver=[0x%x] \n",__func__,__LINE__,info_ver);	
 	if (info_ver < 0x80)
 		ret = convert_ic_info(cd, afe_data);
 	else

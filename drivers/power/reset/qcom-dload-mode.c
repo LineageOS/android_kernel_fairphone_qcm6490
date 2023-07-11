@@ -15,6 +15,9 @@
 #include <linux/pm.h>
 #include <linux/qcom_scm.h>
 #include <soc/qcom/minidump.h>
+#ifdef CONFIG_USB_REDRIVER_PTN36502
+#include <linux/of_gpio.h>
+#endif
 
 enum qcom_download_dest {
 	QCOM_DOWNLOAD_DEST_UNKNOWN = -1,
@@ -40,6 +43,9 @@ static bool enable_dump =
 static enum qcom_download_mode current_download_mode = QCOM_DOWNLOAD_NODUMP;
 static enum qcom_download_mode dump_mode = QCOM_DOWNLOAD_FULLDUMP;
 static bool early_pcie_init_enable;
+#ifdef CONFIG_USB_REDRIVER_PTN36502
+extern int redrive_ldo1v8_en;
+#endif
 
 static int set_download_mode(enum qcom_download_mode mode)
 {
@@ -264,6 +270,9 @@ static int qcom_dload_reboot(struct notifier_block *this, unsigned long event,
 
 	if (cmd) {
 		if (!strcmp(cmd, "edl")) {
+#ifdef CONFIG_USB_REDRIVER_PTN36502
+			gpio_direction_output(redrive_ldo1v8_en,0);
+#endif
 			early_pcie_init_enable ? set_download_mode(QCOM_EDLOAD_PCI_MODE)
 				: set_download_mode(QCOM_DOWNLOAD_EDL);
 		}

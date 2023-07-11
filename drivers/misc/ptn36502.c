@@ -15,7 +15,7 @@
 #define PTN_REGISTER_DEBUG
 
 struct i2c_client *ptn_client;
-static int redrive_ldo1v8_en;
+int redrive_ldo1v8_en; //delete "static" to use extern, modified by yushixian for FP5-2059 20230711
 static int redriver_en;
 bool ptn_dp_enabled = false; //add by yushixian for FP5-733 20230511
 

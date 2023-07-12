@@ -22166,6 +22166,16 @@ int wlan_hdd_disconnect(struct hdd_adapter *adapter, u16 reason,
 	int ret;
 	mac_handle_t mac_handle;
 	struct hdd_station_ctx *sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
+	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
+
+	ret = wlan_hdd_validate_context(hdd_ctx);
+	if (ret)
+		return ret;
+
+	if (hdd_ctx->is_wiphy_suspended) {
+		hdd_info_rl("wiphy is suspended retry disconnect");
+		return -EAGAIN;
+	}
 
 	mac_handle = hdd_adapter_get_mac_handle(adapter);
 	wlan_hdd_wait_for_roaming(mac_handle, adapter);

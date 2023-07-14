@@ -1240,6 +1240,7 @@ void dw9784_flash_ldt_register_read(struct cam_ois_ctrl_t *o_ctrl)
 jinghuang add beging
 af drift comp
 ******************************************************************/
+#if 0
 static int dw9784_ois_acc_gain(struct cam_ois_ctrl_t *o_ctrl,int targetpos);
 
 static int dw9784_ois_af_drift(int targetpos){
@@ -1249,17 +1250,31 @@ static int dw9784_ois_af_drift(int targetpos){
     dw9784_ois_acc_gain(o_ctrl,targetpos);//acc gain for lens shift
     return ret;
 }
+#endif
+
 static ssize_t afdrift_show(struct class *class, struct class_attribute *attr, char *buf){
     printk("ois afdrift_show enter");
     return 0;
 }
+
 static ssize_t afdrift_store(struct class *class, struct class_attribute *attr,
-                            const char *buf, size_t count){
-    int targetpos = 0;
-    sscanf(buf,"%x",&targetpos);
-    CAM_DBG(CAM_OIS,"ois afdrift_store targetpos=0x%x",targetpos);
-    dw9784_ois_af_drift(targetpos);
-    return count;
+							const char *buf, size_t count)
+{
+	int32_t AFDrift = 0, tagetPos = 0, accGain = 0;
+	struct cam_ois_ctrl_t *o_ctrl = g_o_ctrl;
+
+	sscanf(buf, "%x", &AFDrift);
+
+	tagetPos = AFDrift & 0xFFFF;
+	accGain = (AFDrift >> 16) & 0xFFFF;
+
+	CAM_DBG(CAM_OIS,"ois afdrift_store AFDrift = 0x%x, tagetPos = 0x%x, accGain = 0x%x",AFDrift, tagetPos, accGain);
+
+	write_reg_16bit_value_16bit(o_ctrl, 0x7070, tagetPos);//af drift comp
+	write_reg_16bit_value_16bit(o_ctrl, 0x7076, accGain);//x
+	write_reg_16bit_value_16bit(o_ctrl, 0x7077, accGain);//y
+
+	return count;
 }
 
 /*****************************************************************
@@ -1268,6 +1283,8 @@ acc gain  for lens shift
 *****************************************************************/
 int macroDAC = 0xd44;//default value
 int infinityDAC = 0x200;//default value
+
+#if 0
 static int dw9784_ois_acc_gain(struct cam_ois_ctrl_t *o_ctrl,int targetpos){
     float k,distance,shift_h,normalized_h;
     int acc_gain,ret;
@@ -1276,7 +1293,7 @@ static int dw9784_ois_acc_gain(struct cam_ois_ctrl_t *o_ctrl,int targetpos){
         //distance: mm  targetpos:DAC
         distance=((float)macroDAC-(float)targetpos)*k+100.0;
     else
-        distance=100.0-k*((float)targetpos-(float)macroDAC);//distance: mm	targetpos:DAC
+        distance=100.0-k*((float)targetpos-(float)macroDAC);//distance:mm targetpos:DAC
     if(distance < 0)
         distance = 0;
     shift_h = (5.56/distance)*3.5;//shift_h:mm
@@ -1288,10 +1305,13 @@ static int dw9784_ois_acc_gain(struct cam_ois_ctrl_t *o_ctrl,int targetpos){
     ret = write_reg_16bit_value_16bit(o_ctrl,0x7077,acc_gain);//y
     return ret;
 }
+#endif
+
 static ssize_t accgain_show(struct class *class, struct class_attribute *attr, char *buf){
     printk("ois accgain_show enter");
     return 0;
 }
+
 static ssize_t accgain_store(struct class *class, struct class_attribute *attr,
                             const char *buf, size_t count){
     sscanf(buf,"%x %x",&macroDAC,&infinityDAC);

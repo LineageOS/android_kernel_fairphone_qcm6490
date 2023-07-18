@@ -305,6 +305,15 @@ static int cam_actuator_component_bind(struct device *dev,
 
 	rc = cam_actuator_parse_dt(a_ctrl, &(pdev->dev));
 	if (rc < 0) {
+
+#ifndef CONFIG_QGKI
+		/*Begin zihao.li for [Task][FP5-2306] FP5 fix enter dump during gsi test after flashing gki on 20230718*/
+		if (rc < 0) {
+			rc = 0;
+		}
+		/*End   zihao.li for [Task][FP5-2306] FP5 fix enter dump during gsi test after flashing gki on 20230718*/
+#endif
+
 		CAM_ERR(CAM_ACTUATOR, "Paring actuator dt failed rc %d", rc);
 		goto free_mem;
 	}

@@ -50,9 +50,9 @@ static struct miscdevice *g_misc_dev = NULL;
 static DEFINE_MUTEX(g_cali_lock);
 
 #ifndef AW_AUDIOREACH_PLATFORM
-#ifdef CONFIG_AUDIO_QGKI
+//#ifdef CONFIG_AUDIO_QGKI
 #define AW_CALI_STORE_EXAMPLE
-#endif
+//#endif
 #endif
 
 #ifdef AW_CALI_STORE_EXAMPLE
@@ -1289,7 +1289,7 @@ static void aw_cali_attr_deinit(struct aw_device *aw_dev)
 /*****************************attr   end***************************************************/
 
 /*****************************class node******************************************************/
-#ifdef CONFIG_AUDIO_QGKI
+//#ifdef CONFIG_AUDIO_QGKI
 static ssize_t aw_cali_class_time_show(struct  class *class, struct class_attribute *attr, char *buf)
 {
 	ssize_t len = 0;
@@ -1551,7 +1551,7 @@ static struct class_attribute class_attr_f0_show = \
 static struct class_attribute class_att_re_range = \
 		__ATTR(re_range, S_IRUGO, \
 		aw_class_re_range_show, NULL);
-#endif
+//#endif
 static struct class aw_cali_class = {
 	.name = "smartpa",
 	.owner = THIS_MODULE,
@@ -1571,7 +1571,7 @@ static void aw_cali_class_attr_init(struct aw_device *aw_dev)
 		aw_dev_info(aw_dev->dev, "error creating class node");
 		return;
 	}
-#ifdef CONFIG_AUDIO_QGKI
+//#ifdef CONFIG_AUDIO_QGKI
 	ret = class_create_file(&aw_cali_class, &class_attr_re25_calib);
 	if (ret) {
 		aw_dev_info(aw_dev->dev, "creat class_attr_re25_calib fail");
@@ -1595,19 +1595,19 @@ static void aw_cali_class_attr_init(struct aw_device *aw_dev)
 	ret = class_create_file(&aw_cali_class, &class_att_re_range);
 	if (ret)
 		aw_dev_err(aw_dev->dev, "creat class_att_re_range fail");
-#endif
+//#endif
 }
 
 static void aw_cali_class_attr_deinit(struct aw_device *aw_dev)
 {
-#ifdef CONFIG_AUDIO_QGKI
+//#ifdef CONFIG_AUDIO_QGKI
 	class_remove_file(&aw_cali_class, &class_att_re_range);
 	class_remove_file(&aw_cali_class, &class_attr_re25_calib);
 	class_remove_file(&aw_cali_class, &class_attr_f0_calib);
 	class_remove_file(&aw_cali_class, &class_attr_cali_time);
 	class_remove_file(&aw_cali_class, &class_attr_re_show);
 	class_remove_file(&aw_cali_class, &class_attr_f0_show);
-#endif
+//#endif
 	class_unregister(&aw_cali_class);
 	aw_dev_info(aw_dev->dev, "unregister class node");
 }

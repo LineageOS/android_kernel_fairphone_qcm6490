@@ -932,7 +932,14 @@ static void cam_res_mgr_component_unbind(struct device *dev,
 {
 	if (cam_res) {
 		cam_res_mgr_free_res();
-		devm_pinctrl_put(cam_res->pinctrl);
+
+		/*Begin zihao.li for [Task][FP5-2306] FP5 fix enter dump during gsi test after flashing gki on 20230718*/
+		if(cam_res->pinctrl != NULL)
+		{
+			devm_pinctrl_put(cam_res->pinctrl);
+		}
+		/*End   zihao.li for [Task][FP5-2306] FP5 fix enter dump during gsi test after flashing gki on 20230718*/
+
 		cam_res->pinctrl = NULL;
 		cam_res->pstatus = PINCTRL_STATUS_PUT;
 		kfree(cam_res);

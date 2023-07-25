@@ -38,8 +38,8 @@ struct qcom_dload {
 
 #define QCOM_DOWNLOAD_BOTHDUMP (QCOM_DOWNLOAD_FULLDUMP | QCOM_DOWNLOAD_MINIDUMP)
 
-static bool enable_dump = 0;
-	//IS_ENABLED(CONFIG_POWER_RESET_QCOM_DOWNLOAD_MODE_DEFAULT);
+static bool enable_dump =
+	IS_ENABLED(CONFIG_POWER_RESET_QCOM_DOWNLOAD_MODE_DEFAULT);
 static enum qcom_download_mode current_download_mode = QCOM_DOWNLOAD_NODUMP;
 static enum qcom_download_mode dump_mode = QCOM_DOWNLOAD_FULLDUMP;
 static bool early_pcie_init_enable;

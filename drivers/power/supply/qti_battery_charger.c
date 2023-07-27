@@ -1184,7 +1184,7 @@ static int battery_psy_set_display_charge_current(struct battery_chg_dev *bcdev,
 }
 
 #ifdef CHARGE_MODE_FCC_SUPPORT
-#define SLOW_MODE_FCC 2000000 // 2A
+#define SLOW_MODE_FCC 1000000 // 2A
 #define NORMAL_MODE_FCC 6000000 // 6A
 static int battery_psy_set_charge_current_by_chgmode(struct battery_chg_dev *bcdev, int val)
 {

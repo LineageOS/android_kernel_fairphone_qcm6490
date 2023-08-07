@@ -20,6 +20,37 @@
 #define SDE_CONNECTOR_DHDR_MEMPOOL_MAX_SIZE	SZ_32
 #define MAX_CMD_RECEIVE_SIZE       256
 
+/*
+##TAG:Add by T2M-mingwu.zhang [Begin] 
+##BUG:FP5-2466 
+##INFO:Curve parameter adjustment to enhance code vitality.
+*/
+#ifdef CONFIG_PROJECT_FP5
+/* Curve critical point */
+#define		SDE_CURVE_LIMIT1	11
+#define		SDE_CURVE_LIMIT2	30
+#define		SDE_CURVE_LIMIT3	121
+#define		SDE_CURVE_LIMIT4	633
+#define		SDE_CURVE_LIMIT5	2047
+
+/* APP Curve Scale Factor */
+#define		SDE_CURVE_APP_SCALE1	9.7  
+#define		SDE_CURVE_APP_SCALE2	10.5 
+#define		SDE_CURVE_APP_SCALE3	11.6 
+#define		SDE_CURVE_APP_SCALE4	1.8  
+#define		SDE_CURVE_APP_SCALE5	0.51  
+#define		SDE_CURVE_APP_SCALE6	0.28  
+
+/* APP Curve compensation */
+#define		SDE_CURVE_APP_COMP1		5.7   
+#define		SDE_CURVE_APP_COMP2		14   
+#define		SDE_CURVE_APP_COMP3		275   
+#define		SDE_CURVE_APP_COMP4		1528  
+#define		SDE_CURVE_APP_COMP5		2472  
+#define		SDE_CURVE_APP_COMP6		2948  
+#endif
+/*Add by T2M-mingwu.zhang [End]*/
+
 struct sde_connector;
 struct sde_connector_state;
 

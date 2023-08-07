@@ -135,18 +135,49 @@ static int sde_backlight_device_update_status(struct backlight_device *bd)
 
 	/* map UI brightness into driver backlight level with rounding */
 /*Add by T2M-mingwu.zhang for FP5-129 remarks: Backlight curve mapping.[Begin]*/	
+/*
+##	INFO:	To overwrite the previous curve mapping table, 
+##			please add modification information below in the following format!
+##			Author:xxxxxx.xxx 
+##				Updatetime:xx.xx.xx
+##				......
+##
+##	Modifying Record:
+##
+##			Author:mingwu.zhang 
+##				Updatetime:2023.08.03
+##				XXX:Increase the macro definition of brightness curve parameters 
+##					and reduce the coupling between curve parameters and code.
+##				BUG:FP5-2466
+##				| Curve critical point      | APP Curve Scale Factor        | APP Curve compensation   |
+##  			        |			    |		       	            |			       |
+##				| SDE_CURVE_LIMIT1	11  | SDE_CURVE_APP_SCALE1	9.7 | SDE_CURVE_APP_COMP1  5.7 |
+##				| SDE_CURVE_LIMIT2	30  | SDE_CURVE_APP_SCALE2	10.5| SDE_CURVE_APP_COMP2  14  |
+##				| SDE_CURVE_LIMIT3	121 | SDE_CURVE_APP_SCALE3	11.6| SDE_CURVE_APP_COMP3  275 |
+##				| SDE_CURVE_LIMIT4	633 | SDE_CURVE_APP_SCALE4	1.8 | SDE_CURVE_APP_COMP4  1528|
+##				| SDE_CURVE_LIMIT5	2047| SDE_CURVE_APP_SCALE5	0.51| SDE_CURVE_APP_COMP5  2472|
+##  				|                           | SDE_CURVE_APP_SCALE6	0.28| SDE_CURVE_APP_COMP6  2948|
+##	
+##			Author:xxxxxx.xxx 
+##				Updatetime:xx.xx.xx	
+##				......
+*/
 #ifdef CONFIG_PROJECT_FP5
 	if (!strcmp(display->display_type, "primary")){
 		if(brightness <= 0){
 			bl_lvl = 0;
-		} else if(brightness >= 1 && brightness <= 11){
-			bl_lvl = (int)(9.7 * brightness - 5.7);
-		} else if(brightness > 11 && brightness <= 30){
-			bl_lvl = (int)(10.5 * brightness - 14);
-		} else if(brightness > 30 && brightness <= 2047){
-			bl_lvl = (int)(1.59 * brightness + 260);
+		} else if(brightness >= 1 && brightness <= SDE_CURVE_LIMIT1){
+			bl_lvl = (int)(SDE_CURVE_APP_SCALE1 * brightness - SDE_CURVE_APP_COMP1);
+		} else if(brightness > SDE_CURVE_LIMIT1 && brightness <= SDE_CURVE_LIMIT2){
+			bl_lvl = (int)(SDE_CURVE_APP_SCALE2 * brightness - SDE_CURVE_APP_COMP2);
+		} else if(brightness > SDE_CURVE_LIMIT2 && brightness <= SDE_CURVE_LIMIT3){
+			bl_lvl = (int)(SDE_CURVE_APP_SCALE3 * brightness + SDE_CURVE_APP_COMP3);
+		} else if(brightness > SDE_CURVE_LIMIT3 && brightness <= SDE_CURVE_LIMIT4){
+			bl_lvl = (int)(SDE_CURVE_APP_SCALE4 * brightness + SDE_CURVE_APP_COMP4);
+		} else if(brightness > SDE_CURVE_LIMIT4 && brightness <= SDE_CURVE_LIMIT5){
+			bl_lvl = (int)(SDE_CURVE_APP_SCALE5 * brightness + SDE_CURVE_APP_COMP5);
 		} else {
-			bl_lvl = (int)(0.28 * brightness + 2948);
+			bl_lvl = (int)(SDE_CURVE_APP_SCALE6 * brightness + SDE_CURVE_APP_COMP6);
 		}
 
 		if(bl_lvl > display->panel->bl_config.bl_max_level)	

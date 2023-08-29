@@ -704,12 +704,12 @@
 			nfc_enable_active: nfc_enable_active {
 				mux {
 					/* 38: Enable, 40: Firmware, 39: CLOCK */
-					pins = "gpio38", "gpio40", "gpio39";
+					pins = "gpio38", "gpio39";
 					function = "gpio";
 				};
 
 				config {
-					pins = "gpio38", "gpio40", "gpio39";
+					pins = "gpio38", "gpio39";
 					drive-strength = <2>; /* 2 MA */
 					bias-disable;
 				};
@@ -718,12 +718,12 @@
 			nfc_enable_suspend: nfc_enable_suspend {
 				mux {
 					/* 38: Enable, 40: Firmware, 39: CLOCK */
-					pins = "gpio38", "gpio40", "gpio39";
+					pins = "gpio38", "gpio39";
 					function = "gpio";
 				};
 
 				config {
-					pins = "gpio38", "gpio40", "gpio39";
+					pins = "gpio38", "gpio39";
 					drive-strength = <2>; /* 2 MA */
 					bias-disable;
 				};
@@ -3120,6 +3120,86 @@
 					drive-strength = <2>;
 					output-low;
 					bias-pull-down;
+				};
+			};
+		};
+
+		pmx_fp_pwr_high {
+			fingerprint_pins_power_output1: fingerprint_pins_power_output1 {
+				mux {
+					pins = "gpio60";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio60";
+					drive-strength = <2>;
+					bias-disable;
+					output-high;
+				};
+			};
+		};
+
+		pmx_fp_pwr_low {
+			fingerprint_pins_power_output0: fingerprint_pins_power_output0 {
+				mux {
+					pins = "gpio60";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio60";
+					drive-strength = <2>;
+					bias-disable;
+					output-low;
+				};
+			};
+		};
+
+		pmx_fp_int_active {
+			fingerprint_pins_rst_output0: fingerprint_pins_rst_output0 {
+				mux {
+					pins = "gpio34";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio34";
+					drive-strength = <2>;
+					bias-disable;
+					input-enable;
+				};
+			};
+		};
+
+		pmx_fp_reset_active {
+			fingerprint_pins_rst_output1: fingerprint_pins_rst_output1 {
+				mux {
+					pins = "gpio35";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio35";
+					drive-strength = <2>;
+					bias-disable;
+					output-high;
+				};
+			};
+		};
+
+		pmx_fp_reset_suspend {
+			fingerprint_pins_eint_as_int: fingerprint_pins_eint_as_int {
+				mux {
+					pins = "gpio35";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio35";
+					drive-strength = <2>;
+					bias-disable;
+					output-low;
 				};
 			};
 		};

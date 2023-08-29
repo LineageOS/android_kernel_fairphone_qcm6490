@@ -37,7 +37,7 @@
 		reg = <0x28>;
 		qcom,sn-irq = <&tlmm 41 0x00>;
 		qcom,sn-ven = <&tlmm 38 0x00>;
-		qcom,sn-firm = <&tlmm 40 0x00>;
+//		qcom,sn-firm = <&tlmm 40 0x00>;
 		qcom,sn-clkreq = <&tlmm 39 0x00>;
 		qcom,sn-vdd-1p8-supply = <&L18B>;
 		qcom,sn-vdd-1p8-voltage = <1800000 1800000>;
@@ -422,4 +422,4 @@
 		novatek,trusted-touch-io-sizes = <0x1000 0x1000 0x1000 0x1000 0x1000 0x4000>;
 	};
 };
-#include "camera/yupik-camera-sensor-idp.dtsi"
+#include "camera/fp5-yupik-camera-sensor-idp.dtsi"

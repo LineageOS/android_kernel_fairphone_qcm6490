@@ -13,6 +13,7 @@
 #include "dsi-panel-ext-bridge-1080p.dtsi"
 #include "dsi-panel-ili9881p-720-video.dtsi"
 #include <dt-bindings/clock/mdss-5nm-pll-clk.h>
+#include "dsi-panel-rm692e5-boe-amoled-cmd.dtsi"
 
 &soc {
 	dsi_panel_pwr_supply: dsi_panel_pwr_supply {
@@ -141,7 +142,7 @@
 		qcom,dsi-phy = <&mdss_dsi_phy0>;
 
 		qcom,mdp = <&mdss_mdp>;
-		qcom,dsi-default-panel = <&dsi_nt36672e_fhd_plus_144_video>;
+		qcom,dsi-default-panel = <&rm692e5_boe_amoled_cmd>;
 	};
 };
 
@@ -380,5 +381,26 @@
 			qcom,display-topology = <1 0 1>;
 			qcom,default-topology-index = <0>;
 		};
+	};
+};
+
+&rm692e5_boe_amoled_cmd {
+	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
+	qcom,mdss-dsi-display-timings {
+		timing@0{
+			qcom,mdss-dsi-panel-phy-timings = [00 18 06 06 15 20 06
+				06 07 02 04 00 15 0B];						
+			qcom,display-topology = <1 1 1>;
+			qcom,default-topology-index = <0>;
+			qcom,mdss-dsi-panel-clockrate= <672000000>;
+		};
+
+		timing@1{
+			qcom,mdss-dsi-panel-phy-timings = [00 18 06 06 15 20 06
+				06 07 02 04 00 15 0B];						
+			qcom,display-topology = <1 1 1>;
+			qcom,default-topology-index = <0>;
+			qcom,mdss-dsi-panel-clockrate= <672000000>;
+		};				
 	};
 };

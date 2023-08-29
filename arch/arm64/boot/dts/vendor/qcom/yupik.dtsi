@@ -2826,6 +2826,7 @@
 		qcom,cmd_db_name = "smpb7";
 		cnss-daemon-support;
 		dma-coherent;
+		tsens = "quiet-therm-usr";
 		qcom,fw-prefix;
 		vdd-cx-mx-supply = <&S7B>;
 		qcom,vdd-cx-mx-config = <824000 1120000 0 0 1>;
@@ -4102,6 +4103,8 @@
 				qcom,intents = <0x800  5
 						0x2000 3
 						0x4400 2>;
+			/* Modify by T2M zhiming.weng 20230210 for [CTSV13.0R2]SENSOR->Device Suspend Tests fail [X1-1317] */
+			qcom,non-wake-svc = <0x190>;
 			};
 
 			qcom,adsp_glink_ssr {
@@ -4674,7 +4677,8 @@
 
 	qcom,rmtfs_sharedmem@0 {
 		compatible = "qcom,sharedmem-uio";
-		reg = <0x0 0x280000>;
+		/* FP5-464, change size 0x280000 (2.5MB) to 0x600000 (6MB), liquan.zhou.t2m */
+		reg = <0x0 0x600000>;
 		reg-names = "rmtfs";
 		qcom,client-id = <0x00000001>;
 		qcom,vm-nav-path;
@@ -5541,18 +5545,4 @@
 /* HS UART */
 &qupv3_se7_4uart {
 	status = "ok";
-};
-
-&qupv3_se1_i2c {
-	status = "ok";
-	nq@64 {
-		compatible = "rtc6226";
-		reg = <0x64>;
-		fmint-gpio = <&tlmm 18 0>;
-		vdd-supply = <&L11C>;
-		rtc6226,vdd-supply-voltage = <2800000 2800000>;
-		rtc6226,vdd-load = <15000>;
-		vio-supply = <&L19B>;
-		rtc6226,vio-supply-voltage = <1800000 1800000>;
-	};
 };

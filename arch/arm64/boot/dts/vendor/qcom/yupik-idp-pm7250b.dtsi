@@ -6,6 +6,7 @@
 #include "yupik-audio-overlay.dtsi"
 #include "yupik-pm7250b-thermal-overlay.dtsi"
 #include "display/yupik-sde-display-idp-pm7250b.dtsi"
+#include "haptic_hv.dtsi"
 
 / {
 	qcom,pmic-id = <0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x2e>;
@@ -30,8 +31,101 @@
 			linux,can-disable;
 		};
 	};
+
+	bsp-public-interfaces {
+		compatible = "t2,bsp-public-interfaces";
+		board,name="t2,fp5";
+		board_id0= <&tlmm 106 0>;
+		board_id1= <&tlmm 107 0>;
+		board_id2= <&tlmm 108 0>;
+		board_id3= <&tlmm 104 0>;
+		esim_regulator-supply = <&L5C>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&board_id_default>;
+		status = "ok";
+	};
+
+/* Focaltech FP */
+	focalfp_ft9362 {
+		compatible = "focaltech,fp";
+		interrupt-parent = <&tlmm>;
+		status = "okay";
+		interrupts = <34 IRQ_TYPE_EDGE_RISING>;
+
+		focaltech_fp,reset-gpio = <&tlmm 35 0>;
+		focaltech_fp,irq-gpio = <&tlmm 34 0>;
+		focaltech_fp,vdd-gpio = <&tlmm 60 0>;
+
+		pinctrl-names ="fpsensor_finger_rst_low",
+				"fpsensor_finger_rst_high",
+				"fpsensor_eint_as_int",
+				"fpsensor_finger_power_low",
+				"fpsensor_finger_power_high";
+		pinctrl-0 = <&fingerprint_pins_eint_as_int>;
+		pinctrl-1 = <&fingerprint_pins_rst_output1>;
+		pinctrl-2 = <&fingerprint_pins_rst_output0>;
+		pinctrl-3 = <&fingerprint_pins_power_output0>;
+		pinctrl-4 = <&fingerprint_pins_power_output1>;
+	};
+
+npi_down{
+		 compatible = "qcom,npi-down-status";
+		 qcom,npi-down-en-pin = <&pm7325_gpios 9 0>;
+		 qcom,npi-down-gpio = <&tlmm 98 0x0>;
+		 pinctrl-names = "default", "suspend";
+		 pinctrl-0 = <&npi_down_default &npi_down_en_pin_default>;
+		 pinctrl-1 = <&npi_down_default &npi_down_en_pin_suspend>;
+	};
+
+
 };
 
+&soc {
+	
+	gpio_keys {
+		hall_sensor-vdd-supply = <&L8C>;
+		 pinctrl-0 = <&key_vol_up_default  &hall_sensor_init_default>;
+	 
+		 hall_sensor_key {
+		     label = "hall_sensor_key";
+		     gpios = <&tlmm 155 GPIO_ACTIVE_LOW>;
+		     linux,input-type = <1>;
+		     linux,code = <252>;
+		     linux,can-disable;
+		     gpio-key,wakeup;
+		     debounce-interval = <15>;
+		 };
+	 };	
+
+	///[ADD][EMKIT]///
+ 	emkit_info {
+		compatible = "emkit-info,sys-emkit-info";
+		status = "ok";
+	};	
+
+
+
+};
+
+
+
+&pm7325_gpios{
+    npi_down {
+        npi_down_en_pin_default: npi_down_en_pin_default {
+            pins = "gpio9";
+            function = "normal";
+            output-high;
+            power-source = <0>;
+        };
+
+        npi_down_en_pin_suspend: npi_down_en_pin_suspend {
+            pins = "gpio9";
+            function = "normal";
+            input-enable;
+            power-source = <0>;
+        };
+    };
+}; 
 &spmi_debug_bus {
 	qcom,pm8350b-debug@3 {
 		status = "disabled";
@@ -68,29 +162,27 @@
 	};
 };
 
+
+#include <dt-bindings/clock/qcom,rpmh.h>
 &qupv3_se9_i2c {
 	status = "ok";
-	qcom,clk-freq-out = <1000000>;
 	#address-cells = <1>;
 	#size-cells = <0>;
-	nq@28 {
-		compatible = "qcom,sn-nci";
-		reg = <0x28>;
-		qcom,sn-irq = <&tlmm 41 0x00>;
-		qcom,sn-ven = <&tlmm 38 0x00>;
-		qcom,sn-firm = <&tlmm 40 0x00>;
-		qcom,sn-clkreq = <&tlmm 39 0x00>;
-		qcom,sn-vdd-1p8-supply = <&L18B>;
-		qcom,sn-vdd-1p8-voltage = <1800000 1800000>;
-		qcom,sn-vdd-1p8-current = <157000>;
-		interrupt-parent = <&tlmm>;
-		interrupts = <41 0>;
-		interrupt-names = "nfc_irq";
-		pinctrl-names = "nfc_active", "nfc_suspend";
-		pinctrl-0 = <&nfc_int_active &nfc_enable_active>;
-		pinctrl-1 = <&nfc_int_suspend &nfc_enable_suspend>;
+	st21nfc@28 {
+                compatible = "st,st21nfc";
+                reg = <0x08>;
+                interrupt-parent = <&tlmm>;
+                interrupts = <41  0>;
+                reset-gpios = <&tlmm 38 0x00>;
+                irq-gpios = <&tlmm 41 0x00>;
+                clkreq-gpios = <&tlmm 39 0x00>;
+                clocks = <&rpmhcc RPMH_LN_BB_CLK2>;
+                clock-names = "nfc_ref_clk";
+                st,clk_pinctrl;
+                status = "ok";
 	};
 };
+
 
 &ufsphy_mem {
 	compatible = "qcom,ufs-phy-qmp-v4-yupik";
@@ -306,7 +398,7 @@
 	qcom,vdd-io-voltage-level = <1800000 1800000>;
 	qcom,vdd-io-current-level = <0 325000>;
 
-	status = "ok";
+	status = "disabled";
 };
 
 &sdhc_2 {
@@ -322,45 +414,88 @@
 	qcom,vdd-io-voltage-level = <1800000 2960000>;
 	qcom,vdd-io-current-level = <0 22000>;
 
-	cd-gpios = <&tlmm 91 GPIO_ACTIVE_LOW>;
+	//cd-gpios = <&tlmm 91 GPIO_ACTIVE_LOW>;
 
 	status = "ok";
 };
 
-&qupv3_se13_i2c {
-	#address-cells = <1>;
-	#size-cells = <0>;
-
+&qupv3_se13_spi {
 	status = "ok";
-	qcom,i2c-touch-active="novatek,NVT-ts";
+	qcom,spi-touch-active = "goodix,brl-a";
 
-	novatek@62 {
-		compatible = "novatek,NVT-ts";
-		reg = <0x62>;
+	goodix-berlin@0 {
+		compatible = "goodix,brl-a";
+		reg = <0>;
+		spi-max-frequency = <1000000>;	
 
-		interrupt-parent = <&tlmm>;
-		interrupts = <81 0x2008>;
+		goodix,avdd-name = "avdd";		//3.0v
+		avdd-supply = <&L3C>;
+		goodix,iovdd-name = "iovdd";	//1.8v 
+		iovdd-supply = <&L2C>;
 
-		pinctrl-names = "pmx_ts_active","pmx_ts_suspend",
-					"pmx_ts_release";
+		goodix,irq-gpio = <&tlmm 81 0x0>;
+		goodix,irq-flags = <1>; // 1:trigger rising, 2:trigger falling; 	
+		goodix,reset-gpio = <&tlmm 105 0x0>;
 
-		pinctrl-0 = <&ts_active>;
-		pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
-		pinctrl-2 = <&ts_release>;
+		goodix,panel-max-x = <1224>;
+		goodix,panel-max-y = <2700>;
+		goodix,panel-max-w = <255>;
 
-		novatek,reset-gpio = <&tlmm 105 0x00>;
-		novatek,irq-gpio = <&tlmm 81 0x2008>;
+		panel = <&rm692e5_boe_amoled_cmd>;
 
-		panel = <&dsi_nt36672e_fhd_plus_60_video
-			&dsi_nt36672e_fhd_plus_120_video
-			&dsi_nt36672e_fhd_plus_144_video>;
+		//goodix,panel-max-p = <4096>; // max pressure that pen device supported 
+		//goodix,pen-enable; //support active stylus device
+		goodix.sleep-enable; // enter sleep mode 
+		goodix,firmware-name = "GT9897_05.01.FF.17_4D6C5476.bin";
+		goodix,config-name = "goodix_cfg_group_V15.bin";
+	};	
+};
 
-		novatek,trusted-touch-mode = "vm_mode";
-		novatek,touch-environment = "pvm";
-		novatek,trusted-touch-spi-irq = <601>;
-		novatek,trusted-touch-io-bases = <0xf134000 0xf135000 0xf169000 0xf151000 0xa94000 0x00a10000>;
-		novatek,trusted-touch-io-sizes = <0x1000 0x1000 0x1000 0x1000 0x1000 0x4000>;
+&tlmm {
+		board_id {
+			board_id_default: board_id_default{
+				mux {
+                                       pins = "gpio104","gpio106","gpio107","gpio108";
+                                       function = "gpio";
+				};
+
+				config {
+                                       pins = "gpio104","gpio106","gpio107","gpio108";
+                                       drive-strength = <2>;
+                                       bias-disable;
+                                       input-enable;
+				};
+			};
+		};
+       
+		npi_down_default: npi_down_default {
+        mux {
+            pins = "gpio98";
+            function = "gpio";
+        };
+
+        config {
+            pins = "gpio98";
+            drive-strength = <2>;
+            input-enable;
+            bias-pull-up;
+        };
+    };
+	
+	hall_sensor_init_default:hall_sensor_init_default{
+		
+		mux {
+                 pins = "gpio155";
+                 function = "gpio";
+             };
+ 
+             config {
+                 pins = "gpio155";
+                 drive-strength = <2>;
+                 input-enable; // MODIFIED by hongwei.tian, 2019-05-11,BUG-7754996
+                 bias-pull-up;
+             };
 	};
-};
 
-#include "camera/yupik-camera-sensor-idp.dtsi"
+};
+#include "camera/fp5-yupik-camera-sensor-idp.dtsi"

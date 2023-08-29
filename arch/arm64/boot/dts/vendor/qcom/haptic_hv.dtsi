@@ -1,0 +1,123 @@
+/***************** AWINIC High Voltage Haptic Driver ****************/
+&qupv3_se1_i2c {
+	haptic_hv@5A {
+		compatible = "awinic,haptic_hv";
+		reg = < 0x5A >;
+		irq-gpio = < &tlmm 101 0 >;
+		reset-gpio = < &tlmm 100 0 >;
+		pinctrl-names = "irq_active";
+		pinctrl-0 = < &gpio101_input_pull_up >;
+		f0_pre = < 1700 >;
+		f0_cali_percent = /bits/ 8 < 7 >;
+		mode = /bits/ 8 < 5 >;
+
+/****************************** aw869x ******************************/
+		aw869x_cont_drv_lev = /bits/ 8 < 105 >;
+		aw869x_cont_drv_lvl_ov = /bits/ 8 < 125 >;
+		aw869x_cont_td = < 0x009A >;
+		aw869x_cont_zc_thr = < 0x0FF1 >;
+		aw869x_cont_num_brk = /bits/ 8 < 3 >;
+		aw869x_f0_coeff = < 260 >; /* Don't modify it 2.604167 */
+		aw869x_duration_time = /bits/ 8 < 20 30 60 >;
+		aw869x_f0_trace_parameter = /bits/ 8 < 0x05 0x03 0x02 0x0F >;
+		aw869x_bemf_config = /bits/ 8 < 0x10 0x08 0x03 0xF8 >;
+		aw869x_tset = /bits/ 8 < 0x12 >;
+		aw869x_r_spare = /bits/ 8 < 0x68 >;
+		aw869x_bstdbg = /bits/ 8 < 0x30 0xEB 0xD4 0 0 0 >;
+		aw869x_trig_config = /bits/ 8 < 0 1 1 1 2 0 1 1 1 2 0 1 1 1 2 >;
+		aw869x_bst_vol_default = < 8500 >;
+
+/***************************** aw869xx ******************************/
+		aw869xx_gain_bypass = /bits/ 8 < 1 >;
+		aw869xx_brk_bst_md = /bits/ 8 < 0 >;
+		aw869xx_cont_drv1_lvl = /bits/ 8 < 0x7F >;
+		aw869xx_cont_lra_vrms = < 1000 >; /* Motor rated voltage, mV */
+		aw869xx_cont_brk_time = /bits/ 8 < 0x08 >;
+		aw869xx_cont_tset = /bits/ 8 < 0x06 >;
+		aw869xx_cont_bemf_set = /bits/ 8 < 0x02 >;
+		aw869xx_cont_track_margin = /bits/ 8 < 0x0F >;
+		aw869xx_cont_brk_gain = /bits/ 8 < 0x08 >;
+		aw869xx_cont_bst_brk_gain = /bits/ 8 < 0x05 >;
+		aw869xx_cont_wait_num = /bits/ 8 < 0x06 >;
+		aw869xx_cont_drv1_time = /bits/ 8 < 0x04 >;
+		aw869xx_cont_drv2_time = /bits/ 8 < 0x14 >;
+		aw869xx_duration_time = /bits/ 8 < 20 30 60 >;
+		aw869xx_sine_array = /bits/ 8 < 0x05 0xB2 0xFF 0xEF >;
+		aw869xx_d2s_gain = /bits/ 8 < 0x04 >;
+		aw869xx_bstcfg = /bits/ 8 < 0x20 0x24 0x96 0x40 0x11 >;
+		aw869xx_trig_config = /bits/ 8 < 0 0 0 1 0 2 0 0
+						 0 0 0 1 0 2 0 0
+						 0 0 0 1 0 2 0 0 >;
+		aw869xx_bst_vol_default = < 8500 >;
+		aw869xx_is_enabled_track_en;
+		/* aw869xx_is_enabled_auto_bst; */
+		/* aw869xx_is_enabled_i2s; */
+		/* aw869xx_is_enabled_one_wire; */
+
+/***************************** aw8671x ******************************/
+		aw8671x_gain_bypass = /bits/ 8 < 1 >;
+		aw8671x_brk_bst_md = /bits/ 8 < 0 >;
+		aw8671x_cont_drv1_lvl = /bits/ 8 < 0x7F >;
+		aw8671x_cont_lra_vrms = < 1000 >; /* Motor rated voltage, mV */
+		aw8671x_cont_brk_time = /bits/ 8 < 0x08 >;
+		aw8671x_cont_tset = /bits/ 8 < 0x06 >;
+		aw8671x_cont_bemf_set = /bits/ 8 < 0x02 >;
+		aw8671x_cont_track_margin = /bits/ 8 < 0x0F >;
+		aw8671x_cont_brk_gain = /bits/ 8 < 0x08 >;
+		aw8671x_cont_bst_brk_gain = /bits/ 8 < 0x05 >;
+		aw8671x_cont_wait_num = /bits/ 8 < 0x06 >;
+		aw8671x_cont_drv1_time = /bits/ 8 < 0x04 >;
+		aw8671x_cont_drv2_time = /bits/ 8 < 0x14 >;
+		aw8671x_duration_time = /bits/ 8 < 20 30 60 >;
+		aw8671x_d2s_gain = /bits/ 8 < 0x04 >;
+		aw8671x_trig_config = /bits/ 8 < 0 0 0 1 0 2 0 0
+						 0 0 0 1 0 2 0 0
+						 0 0 0 1 0 2 0 0 >;
+		aw8671x_bst_vol_default = < 6336 >;
+		aw8671x_is_enabled_track_en;
+		/* aw8671x_is_enabled_auto_bst; */
+		/* aw8671x_is_enabled_i2s; */
+		/* aw8671x_is_enabled_one_wire; */
+
+/***************************** aw8692x ******************************/
+		aw8692x_gain_bypass = /bits/ 8 < 1 >;
+		aw8692x_cont_drv1_lvl = /bits/ 8 < 0x7F >;
+		aw8692x_cont_lra_vrms = < 1000 >; /* Motor rated voltage, mV */
+		aw8692x_cont_drv1_time = /bits/ 8 < 0x04 >;
+		aw8692x_cont_drv2_time = /bits/ 8 < 0x06 >;
+		aw8692x_cont_track_margin = /bits/ 8 < 0x0F >;
+		aw8692x_cont_brk_gain = /bits/ 8 < 0x08 >;
+		aw8692x_cont_bst_brk_gain = /bits/ 8 < 0x05 >;
+		aw8692x_cont_wait_num = /bits/ 8 < 0x06 >;
+		aw8692x_cont_brk_time = /bits/ 8 < 0x08 >;
+		aw8692x_brk_bst_md = /bits/ 8 < 0 >;
+		aw8692x_cont_tset = /bits/ 8 < 0x06 >;
+		aw8692x_cont_bemf_set = /bits/ 8 < 0x02 >;
+		aw8692x_duration_time = /bits/ 8 < 20 30 60 >;
+		aw8692x_d2s_gain = /bits/ 8 < 0x04 >;
+		aw8692x_trig_config = /bits/ 8 < 0 0 0 1 0 2 0 0
+						 0 0 0 1 0 2 0 0
+						 0 0 0 1 0 2 0 0 >;
+		aw8692x_bst_vol_default = < 8500 >;
+		aw8692x_is_enabled_track_en;
+		/* aw8692x_is_enabled_auto_bst; */
+		/* aw8692x_is_enabled_one_wire; */
+	};
+};
+
+&tlmm {
+	gpio101_input_pull_up: gpio101_input_pull_up {
+		mux {
+			 pins = "gpio101";
+			 function = "gpio";
+		};
+
+		config {
+			pins = "gpio101";
+			drive-strength = <2>;
+			bias-pull-up;
+			input-enable;
+		};
+	};
+};
+/************************** AWINIC END *****************************/

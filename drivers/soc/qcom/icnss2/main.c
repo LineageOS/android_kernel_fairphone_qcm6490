@@ -97,6 +97,9 @@ uint64_t dynamic_feature_mask = ICNSS_DEFAULT_FEATURE_MASK;
 #define ICNSS_DMS_QMI_CONNECTION_WAIT_MS 50
 #define ICNSS_DMS_QMI_CONNECTION_WAIT_RETRY 200
 
+#define WLAN_EN_TEMP_THRESHOLD		5000
+#define WLAN_EN_DELAY			500
+
 enum icnss_pdr_cause_index {
 	ICNSS_FW_CRASH,
 	ICNSS_ROOT_PD_CRASH,
@@ -546,6 +549,33 @@ static void register_early_crash_notifications(struct device *dev)
 	icnss_pr_dbg("FW crash indication handler registered irq = %d\n", irq);
 	priv->fw_early_crash_irq = irq;
 }
+ 
+static int icnss_get_temperature(struct icnss_priv *priv, int *temp)
+{
+	struct thermal_zone_device *thermal_dev;
+	const char *tsens;
+	int ret;
+
+	ret = of_property_read_string(priv->pdev->dev.of_node,
+				      "tsens",
+				      &tsens);
+	if (ret)
+		return ret;
+
+	icnss_pr_dbg("Thermal Sensor is %s\n", tsens);
+	thermal_dev = thermal_zone_get_zone_by_name(tsens);
+	if (IS_ERR(thermal_dev)) {
+		icnss_pr_err("Fail to get thermal zone. ret: %d",
+			     PTR_ERR(thermal_dev));
+		return PTR_ERR(thermal_dev);
+	}
+
+	ret = thermal_zone_get_temp(thermal_dev, temp);
+	if (ret)
+		icnss_pr_err("Fail to get temperature. ret: %d", ret);
+
+	return ret;
+}
 
 int icnss_call_driver_uevent(struct icnss_priv *priv,
 				    enum icnss_uevent uevent, void *data)
@@ -600,10 +630,21 @@ qmi_send:
 	return ret;
 }
 
+static inline
+void icnss_set_wlan_en_delay(struct icnss_priv *priv)
+{
+	if (priv->wlan_en_delay_ms_user > WLAN_EN_DELAY) {
+		priv->wlan_en_delay_ms = priv->wlan_en_delay_ms_user;
+	} else {
+		priv->wlan_en_delay_ms = WLAN_EN_DELAY;
+	}
+}
+
 static int icnss_driver_event_server_arrive(struct icnss_priv *priv,
 						 void *data)
 {
 	int ret = 0;
+	int temp = 0;	
 	bool ignore_assert = false;
 
 	if (!priv)
@@ -637,6 +678,12 @@ static int icnss_driver_event_server_arrive(struct icnss_priv *priv,
 	}
 
 	if (priv->device_id == WCN6750_DEVICE_ID) {
+		if (!icnss_get_temperature(priv, &temp)) {
+			icnss_pr_dbg("Temperature: %d\n", temp);
+			if (temp < WLAN_EN_TEMP_THRESHOLD)
+			    icnss_set_wlan_en_delay(priv);
+		}
+
 		ret = wlfw_host_cap_send_sync(priv);
 		if (ret < 0)
 			goto fail;
@@ -3471,7 +3518,7 @@ static ssize_t wlan_en_delay_store(struct device *dev,
 	}
 
 	icnss_pr_dbg("WLAN_EN delay: %dms", wlan_en_delay);
-	priv->wlan_en_delay_ms = wlan_en_delay;
+	priv->wlan_en_delay_ms_user = wlan_en_delay;
 
 	return count;
 }

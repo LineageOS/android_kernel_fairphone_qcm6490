@@ -77,7 +77,7 @@ EXPORT_SYMBOL(GetPhoneId);
 
 
 
-static void board_check_cpu()
+static void board_check_cpu(void)
 {
 	
     if (!strcmp(g_emkit_info.board_module_name[MODULE_CPU], "")) {

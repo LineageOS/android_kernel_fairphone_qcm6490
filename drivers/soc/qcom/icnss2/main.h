@@ -472,6 +472,7 @@ struct icnss_priv {
 	struct icnss_dms_data dms;
 	u8 use_nv_mac;
 	u32 wlan_en_delay_ms;
+	u32 wlan_en_delay_ms_user;
 	bool psf_supported;
 	struct notifier_block psf_nb;
 	struct power_supply *batt_psy;

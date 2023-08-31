@@ -47,6 +47,11 @@ static bool early_pcie_init_enable;
 extern int redrive_ldo1v8_en;
 #endif
 
+//+ FP5-2606.  Add ramdump debug way on user release. tianwen.zhang@t2mobile.com
+static int t2m_download_enable = 0;
+module_param_named(t2m_download_enable, t2m_download_enable, int, 0664);
+//- FP5-2606.  Add ramdump debug way on user release. tianwen.zhang@t2mobile.com
+
 static int set_download_mode(enum qcom_download_mode mode)
 {
 	if ((mode & QCOM_DOWNLOAD_MINIDUMP) && !msm_minidump_enabled()) {
@@ -104,8 +109,9 @@ static int param_set_download_mode(const char *val,
 	ret = param_set_bool(val, kp);
 	if (ret)
 		return ret;
-
-	msm_enable_dump_mode(true);
+	msm_enable_dump_mode(enable_dump);
+	if (!enable_dump)
+		qcom_scm_disable_sdi();
 
 	return 0;
 }
@@ -381,6 +387,11 @@ static int qcom_dload_probe(struct platform_device *pdev)
 	store_kaslr_offset();
 	check_pci_edl(pdev->dev.of_node);
 
+      //+ FP5-2606.  Add ramdump debug way . tianwen.zhang@t2mobile
+	if (t2m_download_enable) {
+		enable_dump = 1;
+	}
+      //- FP5-2606.  Add ramdump debug way . tianwen.zhang@t2mobile
 	msm_enable_dump_mode(enable_dump);
 	if (!enable_dump)
 		qcom_scm_disable_sdi();

@@ -523,6 +523,12 @@ enum ts_notify_event {
 	NOTIFY_ESD_ON,
 	NOTIFY_CFG_BIN_FAILED,
 	NOTIFY_CFG_BIN_SUCCESS,
+/*INFO:[BEGIN] by T2M mingwu.zhang for FP5-2659 remarks: In AOD mode, double click wake-up fails.*/
+#ifdef CONFIG_PROJECT_FP5
+	NOTIFY_AOD_SUSPEND,
+	NOTIFY_AOD_RESUME,
+#endif
+/*Add by T2M-mingwu.zhang [End]*/	
 };
 
 enum touch_point_status {
@@ -718,6 +724,12 @@ struct goodix_ts_core {
 #ifdef CONFIG_PROJECT_FP5
 	struct work_struct tpusb_online_work;
 	atomic_t usb_online;
+#endif
+/*Add by T2M-mingwu.zhang [End]*/
+
+/*INFO:[BEGIN] by T2M mingwu.zhang for FP5-2659 remarks: In AOD mode, double click wake-up fails.*/
+#ifdef CONFIG_PROJECT_FP5
+	atomic_t is_aod;
 #endif
 /*Add by T2M-mingwu.zhang [End]*/
 };

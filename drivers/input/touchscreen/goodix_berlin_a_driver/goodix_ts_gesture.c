@@ -245,8 +245,15 @@ static int gsx_gesture_ist(struct goodix_ts_core *cd,
 	int fodx, fody, overlay_area;
 	int ret;
 
-	if (atomic_read(&cd->suspended) == 0 || cd->gesture_type == 0)
+/*INFO:[BEGIN] by T2M mingwu.zhang for FP5-2659 remarks: In AOD mode, double click wake-up fails.*/
+#ifdef CONFIG_PROJECT_FP5	
+	if ((atomic_read(&cd->suspended) || atomic_read(&cd->is_aod)) == 0 || cd->gesture_type == 0)
 		return EVT_CONTINUE;
+#else
+	if (atomic_read(&cd->suspended) == 0 || cd->gesture_type == 0)
+	return EVT_CONTINUE;	
+#endif
+/*Add by T2M-mingwu.zhang [End]*/
 
 	ret = hw_ops->event_handler(cd, &gs_event);
 	if (ret) {
@@ -259,6 +266,16 @@ static int gsx_gesture_ist(struct goodix_ts_core *cd,
 			cd->ts_event.event_type);
 		goto re_send_ges_cmd;
 	}
+
+/*INFO:[BEGIN] by T2M mingwu.zhang for FP5-2659 remarks: In AOD mode, double click wake-up fails.*/
+#ifdef CONFIG_PROJECT_FP5
+	ts_info("%s:suspended=[%d] is_aod=[%d] gesture_type=[%d]! \n",
+			__func__,
+			atomic_read(&cd->suspended),
+			atomic_read(&cd->is_aod),
+			cd->gesture_type);
+#endif
+/*Add by T2M-mingwu.zhang [End]*/			
 
 	switch (gs_event.gesture_type) {
 	case GOODIX_GESTURE_SINGLE_TAP:

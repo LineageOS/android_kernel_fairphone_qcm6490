@@ -31,6 +31,13 @@
 
 #define GOODIX_DEFAULT_CFG_NAME		"goodix_cfg_group.cfg"
 
+/*INFO:[BEGIN] by T2M mingwu.zhang for FP5-2659 remarks: In AOD mode, double click wake-up fails.*/
+#ifdef CONFIG_PROJECT_FP5
+static int goodix_aod_suspend(struct goodix_ts_core *core_data);
+static int goodix_aod_resume(struct goodix_ts_core *core_data);
+#endif
+/*Add by T2M-mingwu.zhang [End]*/
+
 struct goodix_module goodix_modules;
 int core_module_prob_sate = CORE_MODULE_UNPROBED;
 
@@ -1969,12 +1976,22 @@ static int goodix_esd_notifier_callback(struct notifier_block *nb,
 	switch (action) {
 	case NOTIFY_FWUPDATE_START:
 	case NOTIFY_SUSPEND:
+/*INFO:[BEGIN] by T2M mingwu.zhang for FP5-2659 remarks: In AOD mode, double click wake-up fails.*/
+#ifdef CONFIG_PROJECT_FP5	
+	case NOTIFY_AOD_SUSPEND:
+#endif
+/*Add by T2M-mingwu.zhang [End]*/	
 	case NOTIFY_ESD_OFF:
 		goodix_ts_esd_off(ts_esd->ts_core);
 		break;
 	case NOTIFY_FWUPDATE_FAILED:
 	case NOTIFY_FWUPDATE_SUCCESS:
 	case NOTIFY_RESUME:
+/*INFO:[BEGIN] by T2M mingwu.zhang for FP5-2659 remarks: In AOD mode, double click wake-up fails.*/
+#ifdef CONFIG_PROJECT_FP5	
+	case NOTIFY_AOD_RESUME:
+#endif
+/*Add by T2M-mingwu.zhang [End]*/	
 	case NOTIFY_ESD_ON:
 		goodix_ts_esd_on(ts_esd->ts_core);
 		break;
@@ -2203,6 +2220,119 @@ out:
 	return 0;
 }
 
+/*INFO:[BEGIN] by T2M mingwu.zhang for FP5-2659 remarks: In AOD mode, double click wake-up fails.*/
+#ifdef CONFIG_PROJECT_FP5
+static int goodix_aod_resume(struct goodix_ts_core *core_data)
+{
+	struct goodix_ext_module *ext_module, *next;
+	struct goodix_ts_hw_ops *hw_ops = core_data->hw_ops;
+	int ret;
+
+	if (core_data->init_stage < CORE_INIT_STAGE2 ||
+			!atomic_read(&core_data->is_aod))
+		return 0;
+
+	if(core_data->gesture_type != GESTURE_DOUBLE_TAP){
+		ts_err("Gesture type mismatch, gesture_type=[%d]!",core_data->gesture_type);
+		return 0;	
+	}
+
+	ts_info("AOD resume start!");
+	atomic_set(&core_data->is_aod, 0);
+	ts_info("%s: is_aod=[%d]!",__func__,atomic_read(&core_data->is_aod));
+
+	hw_ops->irq_enable(core_data, false);
+
+	mutex_lock(&goodix_modules.mutex);
+	if (!list_empty(&goodix_modules.head)) {
+		list_for_each_entry_safe(ext_module, next,
+					 &goodix_modules.head, list) {
+			if (!ext_module->funcs->before_resume)
+				continue;
+
+			ret = ext_module->funcs->before_resume(core_data,
+					ext_module);
+			if (ret == EVT_CANCEL_RESUME) {
+				mutex_unlock(&goodix_modules.mutex);
+				ts_info("Canceled by module:%s",
+					ext_module->name);
+				goto out;
+			}
+		}
+	}
+	mutex_unlock(&goodix_modules.mutex);
+
+out:
+	if(tp_if_suspend && (tp_if_exist != false)){
+		tp_if_suspend = false;	
+		schedule_work(&global_core_data->tpusb_online_work);		
+	}
+	/* enable irq */
+	hw_ops->irq_enable(core_data, true);
+	/* open esd */
+	goodix_ts_blocking_notify(NOTIFY_AOD_RESUME, NULL);
+
+	ts_info("AOD resume end!");
+	return 0;
+}
+
+static int goodix_aod_suspend(struct goodix_ts_core *core_data)
+{
+	struct goodix_ext_module *ext_module, *next;
+	struct goodix_ts_hw_ops *hw_ops = core_data->hw_ops;
+	int ret;
+
+	if (core_data->init_stage < CORE_INIT_STAGE2 ||
+			atomic_read(&core_data->is_aod))
+		return 0;
+
+	if(core_data->gesture_type != GESTURE_DOUBLE_TAP){
+		ts_info("Gesture type mismatch, gesture_type=[%d]!",core_data->gesture_type);
+		return 0;	
+	}
+
+	ts_info("AOD suspend start!");
+	atomic_set(&core_data->is_aod, 1);
+	ts_info("%s: is_aod=[%d]!",__func__,atomic_read(&core_data->is_aod));
+
+	/* disable irq */
+	hw_ops->irq_enable(core_data, false);
+
+	goodix_ts_blocking_notify(NOTIFY_AOD_SUSPEND, NULL);
+
+	/* inform external module */
+	mutex_lock(&goodix_modules.mutex);
+	if (!list_empty(&goodix_modules.head)) {
+		list_for_each_entry_safe(ext_module, next,
+					 &goodix_modules.head, list) {
+			if (!ext_module->funcs->before_suspend)
+				continue;
+
+			ret = ext_module->funcs->before_suspend(core_data,
+							      ext_module);
+			if (ret == EVT_CANCEL_SUSPEND) {
+				mutex_unlock(&goodix_modules.mutex);
+				ts_info("Canceled by module:%s",
+					ext_module->name);
+				goto out;
+			}
+		}
+	}
+	mutex_unlock(&goodix_modules.mutex);
+
+out:
+	goodix_ts_release_connects(core_data);
+
+	usb_if_err = -EPERM;
+	tp_if_suspend = true;
+	ts_info("usb_if_err=[%d],tp_if_suspend=[%d]",usb_if_err,tp_if_suspend);
+	
+	ts_info("AOD suspend end");
+	return 0;
+}
+#endif
+/*Add by T2M-mingwu.zhang [End]*/
+
 #if IS_ENABLED(CONFIG_FB)
 /**
  * goodix_ts_fb_notifier_callback - Framebuffer notifier callback
@@ -2255,8 +2385,14 @@ int goodix_ts_drm_notifier_callback(struct notifier_block *self,
     switch (*blank) {
     case DRM_PANEL_BLANK_UNBLANK:
         if (event == DRM_PANEL_EARLY_EVENT_BLANK) {
-            ts_info("resume: event = %lu, not care\n", event);
+/*INFO:[BEGIN] by T2M mingwu.zhang for FP5-2659 remarks: In AOD mode, double click wake-up fails.*/
+#ifdef CONFIG_PROJECT_FP5			
+            ts_info("AOD resume\n");
+			goodix_aod_resume(core_data);
+#endif
+/*Add by T2M-mingwu.zhang [End]*/					
         } else if (event == DRM_PANEL_EVENT_BLANK) {
+			ts_info("TS resume\n");
             goodix_ts_resume(core_data);
         }
         break;
@@ -2268,6 +2404,19 @@ int goodix_ts_drm_notifier_callback(struct notifier_block *self,
             ts_info("suspend: event = %lu, not care\n", event);
         }
         break;
+
+/*INFO:[BEGIN] by T2M mingwu.zhang for FP5-2659 remarks: In AOD mode, double click wake-up fails.*/
+#ifdef CONFIG_PROJECT_FP5
+	case DRM_PANEL_BLANK_LP:
+	    if (event == DRM_PANEL_EARLY_EVENT_BLANK) {
+        	ts_info("%s:LP early event!", __func__ );
+			goodix_aod_suspend(core_data);
+        } else if (event == DRM_PANEL_EVENT_BLANK) {
+        	ts_info("%s:LP event!",__func__);
+        }
+		break;	
+#endif
+/*Add by T2M-mingwu.zhang [End]*/
 
     default:
         ts_err("FB BLANK(%d) do not need process\n", *blank);

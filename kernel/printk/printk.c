@@ -68,6 +68,13 @@ int console_printk[4] = {
 	CONSOLE_LOGLEVEL_MIN,		/* minimum_console_loglevel */
 	CONSOLE_LOGLEVEL_DEFAULT,	/* default_console_loglevel */
 };
+
+enum console_sta{
+	console_open = 0,
+	console_close = 1,
+};
+bool console_enabled_userspace = console_close;
+
 EXPORT_SYMBOL_GPL(console_printk);
 
 atomic_t ignore_console_lock_warning __read_mostly = ATOMIC_INIT(0);
@@ -1848,6 +1855,8 @@ static void call_console_drivers(const char *ext_text, size_t ext_len,
 
 	trace_console_rcuidle(text, len);
 
+	if (console_enabled_userspace >= console_close)
+		return;
 	if (!console_drivers)
 		return;
 
@@ -2232,6 +2241,19 @@ static int __init console_msg_format_setup(char *str)
 }
 __setup("console_msg_format=", console_msg_format_setup);
 
+static int __init console_control_setup(char *str)
+{
+	if (!strcmp(str, "true"))
+	{
+		console_enabled_userspace = console_open;
+	}
+	else
+	{
+		console_enabled_userspace = console_close;
+	}
+	return 1;
+}
+__setup("androidboot.uartflag=", console_control_setup);
 /*
  * Set up a console.  Called via do_early_param() in init/main.c
  * for each "console=" parameter in the boot command line.

@@ -25,6 +25,8 @@
  */
 
 /* Include Files */
+#include "linux/fs.h"
+#include <linux/mount.h>
 #include <wbuff.h>
 #include "cfg_ucfg_api.h"
 #include <wlan_hdd_includes.h>
@@ -2150,6 +2152,140 @@ static void hdd_update_tgt_vht_cap(struct hdd_context *hdd_ctx,
 	band_5g->vht_cap.vht_mcs.tx_highest = cpu_to_le16(tx_highest_data_rate);
 }
 
+// FP5-935. Build error after GKI built enabled. liquan.zhou.t2m. 202300508
+#ifdef CONFIG_QGKI
+//add-begin by t2m.wangyang.xie,get wifi mac address
+#define MAC_LEN		6
+#define MAC_STR_LEN	17
+#define MAC_CHAR_NUM	2
+
+static inline int is_in_range(unsigned char c,
+		unsigned char low, unsigned char high)
+{
+	if((c > high) || (c < low)){
+		return 0;
+	}else{
+		return 1;
+	}
+}
+
+//convert a hex string to long integer.
+static int hex_strtol(const char *p)
+{
+	int i;
+	int acc = 0;
+	unsigned char c;
+
+	for(i=0; i<MAC_CHAR_NUM; i++){
+		c = (unsigned char)(p[i]);
+		if (is_in_range(c, '0', '9'))
+			c -= '0';
+		else if (is_in_range(c, 'a', 'f'))
+			c -= ('a' - 10);
+		else if (is_in_range(c, 'A', 'F'))
+			c -= ('A' - 10);
+		else
+			break;
+
+		acc = (acc << 4) + c;
+	}
+
+	return acc;
+}
+
+static int str2wa(const char *str, unsigned char *wa)
+{
+	unsigned char tmp[6];
+	int l;
+	const char *ptr = str;
+	int i;
+	int result = 0;
+
+	for (i = 0; i < MAC_LEN; i++) {
+		l = hex_strtol(ptr);
+		if((l > 255) || (l < 0)){
+			result = -1;
+			break;
+		}
+
+		tmp[i] = (unsigned char)l;
+
+		if(i == MAC_LEN - 1){
+			break; //done
+		}
+
+		ptr = strchr(ptr, ':');
+		if(ptr == NULL){
+			result = -1;
+			break;
+		}
+		ptr++;
+	}
+
+	if(result == 0){
+		memcpy((char *)wa, (char*)(&tmp), MAC_LEN);
+	}
+
+	return result;
+}
+
+static int jrd_get_mac_addr(unsigned char *eaddr)
+{
+	struct vfsmount *mnt;
+	struct file *file;
+	ssize_t result=0;
+	char *buf;
+	int  len;
+	char *wifimac_pos = NULL;
+	char WifiMac[MAC_STR_LEN + 1] = {0};
+	loff_t pos;
+	char *pathname="cmdline";
+
+	mnt = task_active_pid_ns(current)->proc_mnt;
+	file = file_open_root(mnt->mnt_root, mnt, pathname, O_RDONLY, 0);
+	result = PTR_ERR(file);
+	if (IS_ERR(file)) {
+		printk(KERN_ERR "wxm: open /proc/%s: %ld\n", pathname, PTR_ERR(file));
+		goto out;
+	}
+
+	buf = kmalloc(PAGE_SIZE, GFP_KERNEL);
+	if (buf == NULL) {
+        printk(KERN_ERR "failed to malloc buf\n");
+		goto out_fput;
+	}
+
+	len = kernel_read(file, buf, PAGE_SIZE - 1, &pos);
+        if (len < 0) {
+			printk(KERN_ERR "failed to read /proc/%s \n",pathname);
+			goto out_free;
+		}
+        buf[len] = '\0';
+
+        //[BUG]-Modify-Begin by shaopan.tang 2022-02-10 [Groot-2600]Update wifi mac with androidboot.device.wifi_mac
+	wifimac_pos = strstr(buf, "WifiMac");
+	if (!wifimac_pos)
+	{
+		printk(KERN_INFO "Can't find wifimacaddr\n'");
+		goto out_free;
+	}
+    strncpy(WifiMac, wifimac_pos+8, 17);
+	WifiMac[MAC_STR_LEN] = '\0';
+	printk(KERN_INFO "WifiMac ['%s']\n",WifiMac);
+	str2wa(WifiMac, eaddr);
+    return result;
+ out_free:
+	kfree(buf);
+	return -1;
+ out_fput:
+	fput(file);
+	return -1;
+ out: ;;
+    return -1;
+}
+#endif //CONFIG_QGKI
+//add-end
+
 /**
  * hdd_generate_macaddr_auto() - Auto-generate mac address
  * @hdd_ctx: Pointer to the HDD context
@@ -2163,11 +2299,17 @@ static void hdd_update_tgt_vht_cap(struct hdd_context *hdd_ctx,
  */
 static int hdd_generate_macaddr_auto(struct hdd_context *hdd_ctx)
 {
-	unsigned int serialno = 0;
 	struct qdf_mac_addr mac_addr = {
 		{0x00, 0x0A, 0xF5, 0x00, 0x00, 0x00}
 	};
-
+// FP5-935. Build error after GKI built enabled. liquan.zhou.t2m. 202300508
+#ifdef CONFIG_QGKI
+        //add-begin by t2m.wangyang.xie,get wifi mac address
+        int ret = 0;
+	unsigned char nv_mac[6];
+        //add-end
+#else
+	unsigned int serialno = 0;
 	serialno = pld_socinfo_get_serial_number(hdd_ctx->parent_dev);
 	if (serialno == 0)
 		return -EINVAL;
@@ -2177,6 +2319,23 @@ static int hdd_generate_macaddr_auto(struct hdd_context *hdd_ctx)
 	mac_addr.bytes[3] = (serialno >> 16) & 0xff;
 	mac_addr.bytes[4] = (serialno >> 8) & 0xff;
 	mac_addr.bytes[5] = serialno & 0xff;
+#endif //CONFIG_QGKI
+
+// FP5-935. Build error after GKI built enabled. liquan.zhou.t2m. 202300508
+#ifdef CONFIG_QGKI
+        //add-begin by t2m.wangyang.xie,get wifi mac address
+        ret = jrd_get_mac_addr(nv_mac);
+        if ((ret==-1) || (nv_mac[0]==0x00 && nv_mac[1]==0x00 && nv_mac[2]==0x00));
+	    else {
+              mac_addr.bytes[0] = nv_mac[0];
+	    	  mac_addr.bytes[1] = nv_mac[1];
+              mac_addr.bytes[2] = nv_mac[2];
+	    	  mac_addr.bytes[3] = nv_mac[3];
+	    	  mac_addr.bytes[4] = nv_mac[4];
+		  mac_addr.bytes[5] = nv_mac[5];
+        }
+        //add-end
+#endif
 
 	hdd_update_macaddr(hdd_ctx, mac_addr, true);
 	return 0;
@@ -13831,11 +13990,12 @@ static int hdd_initialize_mac_address(struct hdd_context *hdd_ctx)
 	hdd_info("using default MAC address");
 
 	/* Use fw provided MAC */
-	if (!qdf_is_macaddr_zero(&hdd_ctx->hw_macaddr)) {
+	/*if (!qdf_is_macaddr_zero(&hdd_ctx->hw_macaddr)) {
 		hdd_update_macaddr(hdd_ctx, hdd_ctx->hw_macaddr, false);
 		update_mac_addr_to_fw = false;
 		return 0;
-	} else if (hdd_generate_macaddr_auto(hdd_ctx) != 0) {
+	} else if (hdd_generate_macaddr_auto(hdd_ctx) != 0) {*/
+        if (hdd_generate_macaddr_auto(hdd_ctx) != 0) {
 		struct qdf_mac_addr mac_addr;
 
 		hdd_err("MAC failure from device serial no.");
@@ -19654,4 +19814,4 @@ static const struct kernel_param_ops timer_multiplier_ops = {
 };
 
 module_param_cb(timer_multiplier, &timer_multiplier_ops, NULL, 0644);
-
+MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);

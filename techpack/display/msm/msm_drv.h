@@ -48,6 +48,9 @@
 #include <drm/sde_drm.h>
 #include <drm/drm_gem.h>
 #include <drm/drm_dsc.h>
+#if defined(CONFIG_PXLW_IRIS)
+#include <drm/msm_drm_iris.h>
+#endif
 
 #include "sde_power_handle.h"
 

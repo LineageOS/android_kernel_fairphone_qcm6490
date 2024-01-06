@@ -1357,6 +1357,12 @@ static void dp_ctrl_stream_off(struct dp_ctrl *dp_ctrl, struct dp_panel *panel)
 	ctrl->stream_count--;
 }
 
+/* zxz add for USB redriver ptn36502 ,begin */
+#ifdef CONFIG_USB_REDRIVER_PTN36502
+extern void ptn_lane_switch(int lane, int bwcode);
+#endif
+/* zxz add for USB redriver ptn36502 ,end */
+
 static int dp_ctrl_on(struct dp_ctrl *dp_ctrl, bool mst_mode,
 		bool fec_mode, bool dsc_mode, bool shallow, bool skip_op)
 {
@@ -1404,6 +1410,12 @@ static int dp_ctrl_on(struct dp_ctrl *dp_ctrl, bool mst_mode,
 	ctrl->initial_lane_count = ctrl->link->link_params.lane_count;
 	ctrl->initial_bw_code = ctrl->link->link_params.bw_code;
 
+	/* zxz add for USB redriver ptn36502 ,begin */
+	#ifdef CONFIG_USB_REDRIVER_PTN36502
+	ptn_lane_switch(ctrl->link->link_params.lane_count, ctrl->link->link_params.bw_code);
+	#endif
+	/* zxz add for USB redriver ptn36502 ,end */
+	
 	rc = dp_ctrl_link_setup(ctrl, shallow, skip_op);
 	if (!rc)
 		ctrl->power_on = true;

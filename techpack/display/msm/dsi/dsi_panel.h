@@ -149,6 +149,10 @@ struct dsi_panel_reset_config {
 	struct dsi_reset_seq *sequence;
 	u32 count;
 
+/*Add by T2M-mingwu.zhang for FP5-129 remarks: AMOLED Power sequence optimization.[Begin]*/
+	int disp_1v2_off_gpio;
+	int disp_3v0_off_gpio;
+/*Add by T2M-mingwu.zhang [End]*/	
 	int reset_gpio;
 	int disp_en_gpio;
 	int lcd_mode_sel_gpio;

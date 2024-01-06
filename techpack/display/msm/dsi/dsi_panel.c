@@ -17,6 +17,9 @@
 #include "sde_dbg.h"
 #include "sde_dsc_helper.h"
 #include "sde_vdc_helper.h"
+#if defined(CONFIG_PXLW_IRIS)
+#include "iris/dsi_iris6_api.h"
+#endif
 
 /**
  * topology is currently defined by a set of following 3 values:
@@ -129,6 +132,24 @@ static int dsi_panel_gpio_request(struct dsi_panel *panel)
 		}
 	}
 
+/*Add by T2M-mingwu.zhang for FP5-129 remarks: AMOLED Power sequence optimization.[Begin]*/
+	if (gpio_is_valid(r_config->disp_1v2_off_gpio)) {
+		rc = gpio_request(r_config->disp_1v2_off_gpio, "disp_1v2_off_gpio");
+		if (rc) {
+			DSI_ERR("request for disp_1v2_off_gpio failed, rc=%d\n", rc);
+			goto error_release_reset;
+		}
+	}	
+
+	if (gpio_is_valid(r_config->disp_3v0_off_gpio)) {
+		rc = gpio_request(r_config->disp_3v0_off_gpio, "disp_3v0_off_gpio");
+		if (rc) {
+			DSI_ERR("request for disp_3v0_off_gpio failed, rc=%d\n", rc);
+			goto error_release_reset;
+		}
+	}
+/*Add by T2M-mingwu.zhang [End]*/
+
 	if (gpio_is_valid(panel->bl_config.en_gpio)) {
 		rc = gpio_request(panel->bl_config.en_gpio, "bklt_en_gpio");
 		if (rc) {
@@ -155,6 +176,10 @@ static int dsi_panel_gpio_request(struct dsi_panel *panel)
 		}
 	}
 
+#if defined(CONFIG_PXLW_IRIS)
+	iris_request_gpio();
+#endif
+
 	goto error;
 error_release_mode_sel:
 	if (gpio_is_valid(panel->bl_config.en_gpio))
@@ -162,6 +187,12 @@ error_release_mode_sel:
 error_release_disp_en:
 	if (gpio_is_valid(r_config->disp_en_gpio))
 		gpio_free(r_config->disp_en_gpio);
+/*Add by T2M-mingwu.zhang for FP5-129 remarks: AMOLED Power sequence optimization.[Begin]*/		
+	if (gpio_is_valid(r_config->disp_1v2_off_gpio))
+		gpio_free(r_config->disp_1v2_off_gpio);
+	if (gpio_is_valid(r_config->disp_3v0_off_gpio))
+		gpio_free(r_config->disp_3v0_off_gpio);
+/*Add by T2M-mingwu.zhang [End]*/						
 error_release_reset:
 	if (gpio_is_valid(r_config->reset_gpio))
 		gpio_free(r_config->reset_gpio);
@@ -179,6 +210,14 @@ static int dsi_panel_gpio_release(struct dsi_panel *panel)
 
 	if (gpio_is_valid(r_config->disp_en_gpio))
 		gpio_free(r_config->disp_en_gpio);
+
+/*Add by T2M-mingwu.zhang for FP5-129 remarks: AMOLED Power sequence optimization.[Begin]*/
+	if (gpio_is_valid(r_config->disp_1v2_off_gpio))
+		gpio_free(r_config->disp_1v2_off_gpio);
+
+	if (gpio_is_valid(r_config->disp_3v0_off_gpio))
+		gpio_free(r_config->disp_3v0_off_gpio);		
+/*Add by T2M-mingwu.zhang [End]*/
 
 	if (gpio_is_valid(panel->bl_config.en_gpio))
 		gpio_free(panel->bl_config.en_gpio);
@@ -254,6 +293,26 @@ static int dsi_panel_reset(struct dsi_panel *panel)
 		}
 	}
 
+/*Add by T2M-mingwu.zhang for FP5-129 remarks: AMOLED Power sequence optimization.[Begin]*/
+	if (gpio_is_valid(panel->reset_config.disp_1v2_off_gpio)) {
+		rc = gpio_direction_output(panel->reset_config.disp_1v2_off_gpio, 1);
+		if (rc) {
+			DSI_ERR("unable to set dir for disp gpio rc=%d\n", rc);
+			goto exit;
+		}
+	}
+
+	usleep_range(5*1000, 5*1100);
+	DSI_ERR("zmw:name=[%s] line=[%d] usleep5000 \n",__func__,__LINE__);
+	if (gpio_is_valid(panel->reset_config.disp_3v0_off_gpio)) {
+		rc = gpio_direction_output(panel->reset_config.disp_3v0_off_gpio, 1);
+		if (rc) {
+			DSI_ERR("unable to set dir for disp gpio rc=%d\n", rc);
+			goto exit;
+		}
+	}	
+/*Add by T2M-mingwu.zhang [End]*/
+
 	if (r_config->count) {
 		rc = gpio_direction_output(r_config->reset_gpio,
 			r_config->sequence[0].level);
@@ -312,7 +371,7 @@ exit:
 static int dsi_panel_set_pinctrl_state(struct dsi_panel *panel, bool enable)
 {
 	int rc = 0;
-	struct pinctrl_state *state;
+	struct pinctrl_state *state = NULL;
 
 	if (panel->host_config.ext_bridge_mode)
 		return 0;
@@ -320,15 +379,22 @@ static int dsi_panel_set_pinctrl_state(struct dsi_panel *panel, bool enable)
 	if (!panel->pinctrl.pinctrl)
 		return 0;
 
-	if (enable)
-		state = panel->pinctrl.active;
-	else
-		state = panel->pinctrl.suspend;
+	if (enable) {
+		if(!IS_ERR_OR_NULL(panel->pinctrl.active)) {
+			state = panel->pinctrl.active;			
+		}
+	}
+	else {
+		if(!IS_ERR_OR_NULL(panel->pinctrl.suspend)) {
+			state = panel->pinctrl.suspend;			
+		}
+	}
 
-	rc = pinctrl_select_state(panel->pinctrl.pinctrl, state);
-	if (rc)
-		DSI_ERR("[%s] failed to set pin state, rc=%d\n",
-				panel->name, rc);
+	if(state){
+		rc = pinctrl_select_state(panel->pinctrl.pinctrl, state);
+		if (rc)
+			DSI_ERR("[%s] failed to set pin state, rc=%d\n", panel->name, rc);
+	}
 
 	return rc;
 }
@@ -351,6 +417,14 @@ static int dsi_panel_power_on(struct dsi_panel *panel)
 		goto error_disable_vregs;
 	}
 
+#if defined(CONFIG_PXLW_IRIS)
+	usleep_range(1*1000, 1*1000);
+	iris_clk_enable(true);
+	usleep_range(3*1000, 3*1000);
+	iris_reset();
+	usleep_range(5*1000, 5*1000);
+#endif
+
 	rc = dsi_panel_reset(panel);
 	if (rc) {
 		DSI_ERR("[%s] failed to reset panel, rc=%d\n", panel->name, rc);
@@ -362,7 +436,13 @@ static int dsi_panel_power_on(struct dsi_panel *panel)
 error_disable_gpio:
 	if (gpio_is_valid(panel->reset_config.disp_en_gpio))
 		gpio_set_value(panel->reset_config.disp_en_gpio, 0);
+/*Add by T2M-mingwu.zhang for FP5-129 remarks: AMOLED Power sequence optimization.[Begin]*/
+	if (gpio_is_valid(panel->reset_config.disp_1v2_off_gpio))
+		gpio_set_value(panel->reset_config.disp_1v2_off_gpio, 0);
 
+	if (gpio_is_valid(panel->reset_config.disp_3v0_off_gpio))
+		gpio_set_value(panel->reset_config.disp_3v0_off_gpio, 0);
+/*Add by T2M-mingwu.zhang [End]*/
 	if (gpio_is_valid(panel->bl_config.en_gpio))
 		gpio_set_value(panel->bl_config.en_gpio, 0);
 
@@ -385,10 +465,25 @@ static int dsi_panel_power_off(struct dsi_panel *panel)
 	}
 	if (gpio_is_valid(panel->reset_config.disp_en_gpio))
 		gpio_set_value(panel->reset_config.disp_en_gpio, 0);
-
+	
+/*Add by T2M-mingwu.zhang for FP5-129 remarks: AMOLED Power sequence optimization.[Begin]*/
 	if (gpio_is_valid(panel->reset_config.reset_gpio) &&
 					!panel->reset_gpio_always_on)
 		gpio_set_value(panel->reset_config.reset_gpio, 0);
+
+	usleep_range(50*1000, 50*1100);
+	if (gpio_is_valid(panel->reset_config.disp_3v0_off_gpio))
+		gpio_set_value(panel->reset_config.disp_3v0_off_gpio, 0);
+
+	usleep_range(5*1000, 5*1100);
+	DSI_ERR("zmw:name=[%s] line=[%d] usleep5000 \n",__func__,__LINE__);
+	if (gpio_is_valid(panel->reset_config.disp_1v2_off_gpio))
+		gpio_set_value(panel->reset_config.disp_1v2_off_gpio, 0);
+/*Add by T2M-mingwu.zhang [End]*/
+
+#if defined(CONFIG_PXLW_IRIS)
+	iris_reset_off();
+#endif
 
 	if (gpio_is_valid(panel->reset_config.lcd_mode_sel_gpio))
 		gpio_set_value(panel->reset_config.lcd_mode_sel_gpio, 0);
@@ -439,6 +534,13 @@ static int dsi_panel_tx_cmd_set(struct dsi_panel *panel,
 			 panel->name, type);
 		goto error;
 	}
+
+#if defined(CONFIG_PXLW_IRIS)
+	if (iris_get_abyp_mode_blocking() == IRIS_PT_MODE) {
+		rc = iris_pt_send_panel_cmd(panel, &(mode->priv_info->cmd_sets[type]));
+		return rc;
+	}
+#endif
 
 	for (i = 0; i < count; i++) {
 		if (state == DSI_CMD_SET_STATE_LP)
@@ -495,18 +597,18 @@ static int dsi_panel_pinctrl_init(struct dsi_panel *panel)
 	panel->pinctrl.active = pinctrl_lookup_state(panel->pinctrl.pinctrl,
 						       "panel_active");
 	if (IS_ERR_OR_NULL(panel->pinctrl.active)) {
-		rc = PTR_ERR(panel->pinctrl.active);
+		//rc = PTR_ERR(panel->pinctrl.active);
 		DSI_ERR("failed to get pinctrl active state, rc=%d\n", rc);
-		goto error;
+		//goto error;
 	}
 
 	panel->pinctrl.suspend =
 		pinctrl_lookup_state(panel->pinctrl.pinctrl, "panel_suspend");
 
 	if (IS_ERR_OR_NULL(panel->pinctrl.suspend)) {
-		rc = PTR_ERR(panel->pinctrl.suspend);
+		//rc = PTR_ERR(panel->pinctrl.suspend);
 		DSI_ERR("failed to get pinctrl suspend state, rc=%d\n", rc);
-		goto error;
+		//goto error;
 	}
 
 	panel->pinctrl.pwm_pin =
@@ -558,7 +660,12 @@ static int dsi_panel_update_backlight(struct dsi_panel *panel,
 	if (panel->bl_config.bl_inverted_dbv)
 		bl_lvl = (((bl_lvl & 0xff) << 8) | (bl_lvl >> 8));
 
+#if defined(CONFIG_PXLW_IRIS)
+	if (!iris_dc_on_off_pending())
+		rc = iris_update_backlight(bl_lvl);
+#else
 	rc = mipi_dsi_dcs_set_display_brightness(dsi, bl_lvl);
+#endif
 	if (rc < 0)
 		DSI_ERR("failed to update dcs backlight:%d\n", bl_lvl);
 
@@ -2256,6 +2363,24 @@ static int dsi_panel_parse_gpios(struct dsi_panel *panel)
 				 panel->name, rc);
 		}
 	}
+
+/*Add by T2M-mingwu.zhang for FP5-129 remarks: AMOLED Power sequence optimization.[Begin]*/
+	panel->reset_config.disp_1v2_off_gpio =
+			utils->get_named_gpio(utils->data,
+				"qcom,platform-dvdd-off-gpio", 0);
+	if (!gpio_is_valid(panel->reset_config.disp_1v2_off_gpio)) {
+		DSI_DEBUG("[%s] platform-1v2-off-gpio is not set, rc=%d\n",
+				panel->name, rc);
+	}
+
+	panel->reset_config.disp_3v0_off_gpio =
+			utils->get_named_gpio(utils->data,
+				"qcom,platform-vci-off-gpio", 0);
+	if (!gpio_is_valid(panel->reset_config.disp_3v0_off_gpio)) {
+		DSI_DEBUG("[%s] platform-3v0-off-gpio is not set, rc=%d\n",
+				panel->name, rc);
+	}	
+/*Add by T2M-mingwu.zhang [End]*/
 
 	panel->reset_config.lcd_mode_sel_gpio = utils->get_named_gpio(
 		utils->data, mode_set_gpio_name, 0);
@@ -4199,6 +4324,9 @@ int dsi_panel_pre_prepare(struct dsi_panel *panel)
 	}
 
 	mutex_lock(&panel->panel_lock);
+#if defined(CONFIG_PXLW_IRIS)
+	iris_vdd_enable(true);
+#endif
 
 	/* If LP11_INIT is set, panel will be powered up during prepare() */
 	if (panel->lp11_init)
@@ -4249,6 +4377,12 @@ int dsi_panel_update_pps(struct dsi_panel *panel)
 			goto error;
 		}
 	}
+
+#if defined(CONFIG_PXLW_IRIS)
+	pr_info("qcom pps table:\n");
+	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_NONE, 16, 4,
+		set->cmds->msg.tx_buf, set->cmds->msg.tx_len, false);
+#endif
 
 	rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_PPS);
 	if (rc) {
@@ -4361,7 +4495,6 @@ int dsi_panel_prepare(struct dsi_panel *panel)
 	}
 
 	mutex_lock(&panel->panel_lock);
-
 	if (panel->lp11_init) {
 		rc = dsi_panel_power_on(panel);
 		if (rc) {
@@ -4635,7 +4768,13 @@ int dsi_panel_switch(struct dsi_panel *panel)
 
 	mutex_lock(&panel->panel_lock);
 
+#if defined(CONFIG_PXLW_IRIS)
+	rc = iris_switch(panel,
+			&(panel->cur_mode->priv_info->cmd_sets[DSI_CMD_SET_TIMING_SWITCH]),
+			&panel->cur_mode->timing);
+#else
 	rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_TIMING_SWITCH);
+#endif
 	if (rc)
 		DSI_ERR("[%s] failed to send DSI_CMD_SET_TIMING_SWITCH cmds, rc=%d\n",
 		       panel->name, rc);
@@ -4675,7 +4814,11 @@ int dsi_panel_enable(struct dsi_panel *panel)
 
 	mutex_lock(&panel->panel_lock);
 
+#if defined(CONFIG_PXLW_IRIS)
+	rc = iris_enable(panel, &(panel->cur_mode->priv_info->cmd_sets[DSI_CMD_SET_ON]));
+#else
 	rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_ON);
+#endif
 	if (rc)
 		DSI_ERR("[%s] failed to send DSI_CMD_SET_ON cmds, rc=%d\n",
 		       panel->name, rc);
@@ -4759,7 +4902,11 @@ int dsi_panel_disable(struct dsi_panel *panel)
 			panel->power_mode == SDE_MODE_DPMS_LP2))
 			dsi_pwr_panel_regulator_mode_set(&panel->power_info,
 				"ibb", REGULATOR_MODE_STANDBY);
+#if defined(CONFIG_PXLW_IRIS)
+		rc = iris_disable(panel, &(panel->cur_mode->priv_info->cmd_sets[DSI_CMD_SET_OFF]));
+#else
 		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_OFF);
+#endif
 		if (rc) {
 			/*
 			 * Sending panel off commands may fail when  DSI

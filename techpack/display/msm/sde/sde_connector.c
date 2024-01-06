@@ -26,6 +26,10 @@
 #define HDR10_PLUS_VSIF_TYPE_CODE      0x81
 #define MAX_BRIGHTNESS_LEVEL 255
 
+#ifdef CONFIG_PROJECT_FP5
+#define T2M_DISABLE_BL_THERMAL		0x01
+#endif
+
 /* Autorefresh will occur after FRAME_CNT frames. Large values are unlikely */
 #define AUTOREFRESH_MAX_FRAME_CNT 6
 
@@ -121,7 +125,14 @@ static int sde_backlight_device_update_status(struct backlight_device *bd)
 
 	if (c_conn->connector_type == DRM_MODE_CONNECTOR_DSI) {
 		dsi_display = (struct dsi_display *) c_conn->display;
+/*Add by T2M-mingwu.zhang for FP5-129 remarks: Backlight curve mapping.[Begin]*/
+#ifdef CONFIG_PROJECT_FP5
+		bl_max_level =
+			dsi_display->panel->bl_config.brightness_max_level;
+#else
 		bl_max_level = dsi_display->panel->bl_config.bl_max_level;
+#endif
+/*Add by T2M-mingwu.zhang [End]*/
 		brightness_max_level =
 			dsi_display->panel->bl_config.brightness_max_level;
 	} else if (c_conn->connector_type == DRM_MODE_CONNECTOR_eDP) {
@@ -139,7 +150,68 @@ static int sde_backlight_device_update_status(struct backlight_device *bd)
 		brightness = c_conn->thermal_max_brightness;
 
 	/* map UI brightness into driver backlight level with rounding */
+/*Add by T2M-mingwu.zhang for FP5-129 remarks: Backlight curve mapping.[Begin]*/
+/*
+##	INFO:	To overwrite the previous curve mapping table, 
+##			please add modification information below in the following format!
+##			Author:xxxxxx.xxx 
+##				Updatetime:xx.xx.xx
+##				......
+##
+##	Modifying Record:
+##
+##			Author:mingwu.zhang 
+##				Updatetime:2023.08.03
+##				XXX:Increase the macro definition of brightness curve parameters 
+##					and reduce the coupling between curve parameters and code.
+##				BUG:FP5-2466
+##				| Curve critical point      | APP Curve Scale Factor        | APP Curve compensation   |
+##  			        |			    |		       	            |			       |
+##				| SDE_CURVE_LIMIT1	11  | SDE_CURVE_APP_SCALE1	9.7 | SDE_CURVE_APP_COMP1  5.7 |
+##				| SDE_CURVE_LIMIT2	30  | SDE_CURVE_APP_SCALE2	10.5| SDE_CURVE_APP_COMP2  14  |
+##				| SDE_CURVE_LIMIT3	121 | SDE_CURVE_APP_SCALE3	11.6| SDE_CURVE_APP_COMP3  275 |
+##				| SDE_CURVE_LIMIT4	633 | SDE_CURVE_APP_SCALE4	1.8 | SDE_CURVE_APP_COMP4  1528|
+##				| SDE_CURVE_LIMIT5	2047| SDE_CURVE_APP_SCALE5	0.51| SDE_CURVE_APP_COMP5  2472|
+##  				|                           | SDE_CURVE_APP_SCALE6	0.28| SDE_CURVE_APP_COMP6  2948|
+##	
+##			Author:xxxxxx.xxx 
+##				Updatetime:xx.xx.xx	
+##				......
+*/
+#ifdef CONFIG_PROJECT_FP5
+	if (!strcmp(dsi_display->display_type, "primary")){
+		if(brightness <= 0){
+			bl_lvl = 0;
+		} else if(brightness >= 1 && brightness <= SDE_CURVE_LIMIT1){
+			bl_lvl = (int)(SDE_CURVE_APP_SCALE1 * brightness - SDE_CURVE_APP_COMP1);
+		} else if(brightness > SDE_CURVE_LIMIT1 && brightness <= SDE_CURVE_LIMIT2){
+			bl_lvl = (int)(SDE_CURVE_APP_SCALE2 * brightness - SDE_CURVE_APP_COMP2);
+		} else if(brightness > SDE_CURVE_LIMIT2 && brightness <= SDE_CURVE_LIMIT3){
+			bl_lvl = (int)(SDE_CURVE_APP_SCALE3 * brightness + SDE_CURVE_APP_COMP3);
+		} else if(brightness > SDE_CURVE_LIMIT3 && brightness <= SDE_CURVE_LIMIT4){
+			bl_lvl = (int)(SDE_CURVE_APP_SCALE4 * brightness + SDE_CURVE_APP_COMP4);
+		} else if(brightness > SDE_CURVE_LIMIT4 && brightness <= SDE_CURVE_LIMIT5){
+			bl_lvl = (int)(SDE_CURVE_APP_SCALE5 * brightness + SDE_CURVE_APP_COMP5);
+		} else {
+			bl_lvl = (int)(SDE_CURVE_APP_SCALE6 * brightness + SDE_CURVE_APP_COMP6);
+		}
+
+		if (bl_lvl > dsi_display->panel->bl_config.bl_max_level)
+			bl_lvl = dsi_display->panel->bl_config.bl_max_level;
+
+		if ((dsi_display->panel->power_mode == SDE_MODE_DPMS_LP1) ||
+				(dsi_display->panel->power_mode == SDE_MODE_DPMS_LP2)) {
+			if (brightness == 1)
+				bl_lvl = 900;
+		}
+	} else {
+		bl_lvl = mult_frac(brightness, bl_max_level, brightness_max_level);
+	}
+#else
 	bl_lvl = mult_frac(brightness, bl_max_level, brightness_max_level);
+#endif
+	SDE_DEBUG("backlight [%s] bl_lvl = %d brightness = %d \n",__func__,bl_lvl,brightness);
+/*Add by T2M-mingwu.zhang [End]*/
 
 	if (!bl_lvl && brightness)
 		bl_lvl = 1;
@@ -261,7 +333,7 @@ static int sde_backlight_setup(struct sde_connector *c_conn,
 	 * In TVM, thermal cooling device is not enabled. Registering with dummy
 	 * thermal device will return a NULL leading to a failure. So skip it.
 	 */
-	if (sde_in_trusted_vm(sde_kms))
+	if (sde_in_trusted_vm(sde_kms) || T2M_DISABLE_BL_THERMAL)
 		goto done;
 
 	c_conn->n.notifier_call = sde_backlight_cooling_cb;

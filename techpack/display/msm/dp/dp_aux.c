@@ -763,6 +763,12 @@ static void dp_aux_set_sim_mode(struct dp_aux *dp_aux, bool en,
 	mutex_unlock(&aux->mutex);
 }
 
+/* zxz add for USB redriver ptn36502 ,begin */
+#ifdef CONFIG_USB_REDRIVER_PTN36502
+extern void ptn_orientation_switch(int orientation, bool enable);
+#endif
+/* zxz add for USB redriver ptn36502 ,end */
+
 static int dp_aux_configure_aux_switch(struct dp_aux *dp_aux,
 		bool enable, int orientation)
 {
@@ -806,6 +812,12 @@ static int dp_aux_configure_aux_switch(struct dp_aux *dp_aux,
 
 	DP_DEBUG("enable=%d, orientation=%d, event=%d\n",
 			enable, orientation, event);
+
+	/* zxz add for USB redriver ptn36502 ,begin */
+	#ifdef CONFIG_USB_REDRIVER_PTN36502
+	ptn_orientation_switch(orientation, enable);
+	#endif
+	/* zxz add for USB redriver ptn36502 ,end */
 
 	rc = fsa4480_switch_event(aux->aux_switch_node, event);
 	if (rc)

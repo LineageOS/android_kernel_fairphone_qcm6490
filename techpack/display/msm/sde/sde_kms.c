@@ -60,6 +60,10 @@
 #include <linux/qtee_shmbridge.h>
 #include <linux/haven/hh_irq_lend.h>
 
+#if defined(CONFIG_PXLW_IRIS)
+#include "iris/dsi_iris6_api.h"
+#endif
+
 #define CREATE_TRACE_POINTS
 #include "sde_trace.h"
 
@@ -4155,6 +4159,22 @@ end:
 	return 0;
 }
 
+#if defined(CONFIG_PXLW_IRIS)
+static int sde_kms_iris_operate(struct msm_kms *kms,
+		u32 operate_type, struct msm_iris_operate_value *operate_value)
+{
+	int ret = -EINVAL;
+
+	if (operate_type == DRM_MSM_IRIS_OPERATE_CONF) {
+		ret = iris_operate_conf(operate_value);
+	} else if (operate_type == DRM_MSM_IRIS_OPERATE_TOOL) {
+		ret = iris_operate_tool(operate_value);
+	}
+
+	return ret;
+}
+#endif // CONFIG_PXLW_IRIS
+
 static const struct msm_kms_funcs kms_funcs = {
 	.hw_init         = sde_kms_hw_init,
 	.postinit        = sde_kms_postinit,
@@ -4190,6 +4210,9 @@ static const struct msm_kms_funcs kms_funcs = {
 	.trigger_null_flush = sde_kms_trigger_null_flush,
 	.get_mixer_count = sde_kms_get_mixer_count,
 	.get_dsc_count = sde_kms_get_dsc_count,
+#if defined(CONFIG_PXLW_IRIS)
+	.iris_operate = sde_kms_iris_operate,
+#endif
 };
 
 static int _sde_kms_mmu_destroy(struct sde_kms *sde_kms)

@@ -33,6 +33,9 @@
 #define MSM_EEPROM_MAX_MEM_MAP_CNT             100
 #define MSM_EEPROM_MEM_MAP_PROPERTIES_CNT      8
 
+//begin add by jialiwei adapt for fp5 mmi test
+#define TCT_EPPROM_CELL_INDEX 					4
+//end add by jialiwei adapt for fp5 mmi test
 enum cam_eeprom_state {
 	CAM_EEPROM_INIT,
 	CAM_EEPROM_ACQUIRE,

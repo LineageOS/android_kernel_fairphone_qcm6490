@@ -17,5 +17,12 @@ int32_t cam_eeprom_parse_read_memory_map(struct device_node *of_node,
  */
 void cam_eeprom_shutdown(struct cam_eeprom_ctrl_t *e_ctrl);
 
+/*Begin zihao.li for [Task][10684510] brementf add dual camera calibration on 20210129*/
+ssize_t cam_eeprom_dualcamcali_flag_show(struct device *dev, struct device_attribute *attr, char *buf);
+ssize_t cam_eeprom_dualcamcali_flag_store(struct device *dev,  struct device_attribute *attr, const char *buf, size_t count);
+ssize_t cam_eeprom_dualcamcali_data_show(struct device *dev, struct device_attribute *attr, char *buf);
+ssize_t cam_eeprom_dualcamcali_data_store(struct device *dev,  struct device_attribute *attr, const char *buf, size_t count);
+/*End   zihao.li for [Task][10684510] brementf add dual camera calibration on 20210129*/
+
 #endif
 /* _CAM_EEPROM_CORE_H_ */

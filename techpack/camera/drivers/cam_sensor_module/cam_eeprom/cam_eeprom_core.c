@@ -14,6 +14,46 @@
 #include "cam_common_util.h"
 #include "cam_packet_util.h"
 
+/*Begin zihao.li for [Task][10684510] brementf add dual camera calibration on 20210129*/
+struct msm_eeprom_power_setting_array {
+	struct cam_sensor_power_setting power_setting_a[MAX_POWER_CONFIG];
+	struct cam_sensor_power_setting *power_setting;
+	unsigned short size;
+	struct cam_sensor_power_setting power_down_setting_a[MAX_POWER_CONFIG];
+	struct cam_sensor_power_setting *power_down_setting;
+	unsigned short size_down;
+};
+
+struct msm_eeprom_power_setting_array *power_setting_array_dc = NULL;
+
+void cam_eeprom_copy_power_info(struct cam_sensor_power_ctrl_t *power_info)
+{
+	int i = 0;
+	power_setting_array_dc = kzalloc(sizeof(struct msm_eeprom_power_setting_array), GFP_KERNEL);
+	if (power_setting_array_dc == NULL) {
+		CAM_ERR(CAM_EEPROM, "power_setting_array_dc Mem Alloc Fail");
+	}
+
+	power_setting_array_dc->size = power_info->power_setting_size;
+
+	for (i = 0; i < power_info->power_setting_size; i++) {
+		power_setting_array_dc->power_setting_a[i].config_val =power_info->power_setting[i].config_val;
+		power_setting_array_dc->power_setting_a[i].delay =power_info->power_setting[i].delay;
+		power_setting_array_dc->power_setting_a[i].seq_type =power_info->power_setting[i].seq_type;
+		power_setting_array_dc->power_setting_a[i].seq_val =power_info->power_setting[i].seq_val;
+	}
+
+	power_setting_array_dc->size_down = power_info->power_down_setting_size;
+
+	for (i = 0; i < power_info->power_down_setting_size; i++) {
+		power_setting_array_dc->power_down_setting_a[i].config_val =power_info->power_down_setting[i].config_val;
+		power_setting_array_dc->power_down_setting_a[i].delay =power_info->power_down_setting[i].delay;
+		power_setting_array_dc->power_down_setting_a[i].seq_type =power_info->power_down_setting[i].seq_type;
+		power_setting_array_dc->power_down_setting_a[i].seq_val =power_info->power_down_setting[i].seq_val;
+	}
+}
+/*End   zihao.li for [Task][10684510] brementf add dual camera calibration on 20210129*/
+
 #define MAX_READ_SIZE  0x7FFFF
 
 /**
@@ -1313,6 +1353,13 @@ static int32_t cam_eeprom_pkt_parse(struct cam_eeprom_ctrl_t *e_ctrl, void *arg)
 
 		rc = cam_eeprom_get_cal_data(e_ctrl, csl_packet);
 		rc = cam_eeprom_power_down(e_ctrl);
+
+		/*Begin zihao.li for [Task][10684510] brementf add dual camera calibration on 20210129*/
+		if (e_ctrl->soc_info.index == TCT_EPPROM_CELL_INDEX) {
+			cam_eeprom_copy_power_info(&soc_private->power_info);
+		}
+		/*End   zihao.li for [Task][10684510] brementf add dual camera calibration on 20210129*/
+
 		e_ctrl->cam_eeprom_state = CAM_EEPROM_ACQUIRE;
 		vfree(e_ctrl->cal_data.mapdata);
 		vfree(e_ctrl->cal_data.map);
@@ -1533,3 +1580,432 @@ release_mutex:
 
 	return rc;
 }
+
+/*Begin jialiwei/zihao.li for fp5/brementf add dual camera calibration on 20210129*/
+#ifndef USE_GKI_CALI_SCHEME
+#define USE_GKI_CALI_SCHEME
+
+#include <linux/dma-contiguous.h>
+
+#ifndef USE_GKI_CALI_SCHEME
+#define PATH_CALI      "/sdcard/MMI/dualcam_cali.bin"
+#endif
+
+#define SLAVE_ADDRESS           0xA0
+
+#define CALI_DATA_FLAG_ADDR     0x3041
+#define CALI_DATA_MAX_SIZE      0x01a0
+#define CALI_DATA_BLOCK_ADDR    0x3042
+#define CALI_DATA_BLOCK_SIZE    0x01a0
+#define CALI_DATA_CHECKSUM_ADDR 0X32e2
+#define CALI_DATA_CMD_WRITE     0x0001
+#define CALI_DATA_CMD_CHECK     0x0003
+unsigned char *bin_buffer = NULL;
+
+#ifndef USE_GKI_CALI_SCHEME
+static uint32_t read_dualcam_cali_data(void)
+{
+	struct file *fp;
+	loff_t pos = 0;
+	uint32_t data_size = 0;
+	mm_segment_t old_fs;
+	uint32_t rc = 0;
+
+	fp = filp_open(PATH_CALI, O_RDWR, 0666);
+
+	if (IS_ERR(fp)) {
+		CAM_ERR(CAM_EEPROM, "fail to open file :%s", PATH_CALI);
+		return 0;
+	}
+
+	data_size = vfs_llseek(fp, 0, SEEK_END);
+	CAM_INFO(CAM_EEPROM, "data size:%d bytes", data_size);
+
+	if (data_size > 0) {
+		bin_buffer = kzalloc(data_size, GFP_KERNEL);
+		if (bin_buffer == NULL) {
+			CAM_ERR(CAM_EEPROM, "malloc memory fail");
+			goto close;
+		}
+
+		old_fs = get_fs();
+		set_fs(KERNEL_DS);
+
+		vfs_read(fp, bin_buffer, data_size, &pos);
+		if(rc < 0){
+			set_fs(old_fs);
+			CAM_ERR(CAM_EEPROM, "read file failed rc = %d", rc);
+			goto close;
+		}
+		set_fs(old_fs);
+
+		CAM_INFO(CAM_EEPROM, "read data done data_size:%d", data_size);
+
+		filp_close(fp, NULL);
+		return data_size;
+	} else {
+		CAM_ERR(CAM_EEPROM, "get data fail");
+	}
+
+close:
+	filp_close(fp, NULL);
+	return -1;
+}
+
+static int calibration_check(struct cam_eeprom_ctrl_t *e_ctrl)
+{
+	int rc = 0;
+	uint32_t data = 0;
+
+	if (!e_ctrl) {
+		CAM_ERR(CAM_EEPROM, "%s e_ctrl is NULL", __func__);
+		return -EINVAL;
+	}
+
+	rc = camera_io_dev_read(&e_ctrl->io_master_info,
+		CALI_DATA_FLAG_ADDR,&data,
+		CAMERA_SENSOR_I2C_TYPE_WORD,
+		CAMERA_SENSOR_I2C_TYPE_BYTE);
+
+	if (rc < 0) {
+		CAM_ERR(CAM_EEPROM, "Calibration flag read failed");
+	} else {
+		CAM_INFO(CAM_EEPROM, "calibration flag = 0x%x", data);
+	}
+
+	rc = camera_io_dev_read(&e_ctrl->io_master_info,
+				CALI_DATA_CHECKSUM_ADDR, &data,
+				CAMERA_SENSOR_I2C_TYPE_WORD,
+				CAMERA_SENSOR_I2C_TYPE_BYTE);
+	if (rc < 0) {
+		CAM_ERR(CAM_EEPROM, "Calibration chksum read fail");
+	} else {
+		CAM_INFO(CAM_EEPROM, "calibration chksum =0x%x", data);
+	}
+
+	return rc;
+}
+#endif
+
+static int read_calibration_flag(struct cam_eeprom_ctrl_t *e_ctrl)
+{
+	int rc = 0;
+	uint32_t calibration_flag = 0;
+
+	if (!e_ctrl) {
+		CAM_ERR(CAM_EEPROM, "%s e_ctrl is NULL", __func__);
+		return -EINVAL;
+	}
+
+	rc = camera_io_dev_read(&e_ctrl->io_master_info,
+			CALI_DATA_FLAG_ADDR,&calibration_flag,
+			CAMERA_SENSOR_I2C_TYPE_WORD,
+			CAMERA_SENSOR_I2C_TYPE_BYTE);
+
+	if (rc < 0) {
+		CAM_ERR(CAM_EEPROM, "%s: Calibration flag read fail\n",
+			__func__);
+	}
+
+	CAM_INFO(CAM_EEPROM, "calibration_flag:%d", calibration_flag);
+
+	return calibration_flag;
+}
+
+static int write_eeprom_memory(struct cam_eeprom_ctrl_t *e_ctrl, uint32_t size)
+{
+	int rc = -1;
+	uint32_t i = 0;
+	uint32_t checksum = 0;
+	struct cam_sensor_i2c_reg_setting i2c_reg_settings = { 0 };
+	struct cam_sensor_i2c_reg_array i2c_reg_array = { 0 };
+
+	if (!e_ctrl || !bin_buffer || (size > CALI_DATA_MAX_SIZE)) {
+		CAM_ERR(CAM_EEPROM,"%s parameters error e_ctrl:%p  bin_buffer:%p size:%d",e_ctrl, bin_buffer, size);
+		return -EINVAL;
+	}
+
+	for (i = 0; i < size; i++) {
+		checksum += bin_buffer[i];
+	}
+
+	CAM_INFO(CAM_EEPROM, "write eeprom size: %d", size);
+
+	/*i2c data parameters config*/
+	i2c_reg_settings.addr_type = CAMERA_SENSOR_I2C_TYPE_WORD;
+	i2c_reg_settings.data_type = CAMERA_SENSOR_I2C_TYPE_BYTE;
+	i2c_reg_settings.reg_setting = &i2c_reg_array;
+	i2c_reg_settings.size = 1;
+	i2c_reg_settings.delay = 4;
+
+	i2c_reg_array.delay = 1;
+	i2c_reg_array.data_mask = 0;
+
+	/*disable write protect*/
+	i2c_reg_array.reg_addr = 0xa000;	//todo ifdef fp5
+	i2c_reg_array.reg_data = 0x00;
+	rc = camera_io_dev_write(&e_ctrl->io_master_info,&i2c_reg_settings);
+	msleep(5);
+	if (rc < 0) {
+		CAM_ERR(CAM_EEPROM,"disable write protect fail rc = %d",rc);
+		return -EINVAL;
+	}
+
+	/*write block1*/
+	for (i = 0; i < CALI_DATA_BLOCK_SIZE; i++) {
+		i2c_reg_array.reg_addr = CALI_DATA_BLOCK_ADDR + i;
+		i2c_reg_array.reg_data = bin_buffer[i];
+
+		rc = camera_io_dev_write(&e_ctrl->io_master_info,&i2c_reg_settings);
+
+		if (rc < 0) {
+			CAM_ERR(CAM_EEPROM,"write eeprom data block1 fail rc = %d write:%d",
+				rc, i);
+			return -EINVAL;
+		}
+	}
+
+	msleep(5);
+	CAM_INFO(CAM_EEPROM, "write total size: %d", i);
+
+	/*write flag*/
+	CAM_ERR(CAM_EEPROM, "write flag...");
+	i2c_reg_array.reg_addr = CALI_DATA_FLAG_ADDR;
+	i2c_reg_array.reg_data = 0x01;
+	rc = camera_io_dev_write(&e_ctrl->io_master_info, &i2c_reg_settings);
+	if (rc < 0) {
+		CAM_ERR(CAM_EEPROM, "write flag Fail");
+		return -EINVAL;
+	}
+	msleep(5);
+
+	/*write chksum*/
+	checksum = checksum % 0xFF + 1;
+	CAM_INFO(CAM_EEPROM, "write checksum: %d", checksum);
+	i2c_reg_array.reg_addr = CALI_DATA_CHECKSUM_ADDR;
+	i2c_reg_array.reg_data = checksum;
+
+	rc = camera_io_dev_write(&e_ctrl->io_master_info, &i2c_reg_settings);
+	if (rc < 0) {
+		CAM_ERR(CAM_EEPROM, "write checksum Fail");
+		return -EINVAL;
+	}
+	msleep(5);
+
+	/*enable write protect*/
+	i2c_reg_array.reg_addr = 0xa000;
+	i2c_reg_array.reg_data = 0x0e;
+	rc = camera_io_dev_write(&e_ctrl->io_master_info,&i2c_reg_settings);
+	msleep(5);
+	if (rc < 0) {
+		CAM_ERR(CAM_EEPROM,"enable write protect fail rc = %d",rc);
+		return -EINVAL;
+	}
+
+	CAM_INFO(CAM_EEPROM, "write eeprom Finish");
+
+	return rc;
+}
+
+ssize_t cam_eeprom_dualcamcali_flag_show(struct device *dev,
+					 struct device_attribute *attr,
+					 char *buf)
+{
+	int rc = -1;
+	char cali_flag = 0;
+	struct cam_eeprom_ctrl_t *e_ctrl = NULL;
+	struct cam_eeprom_soc_private *soc_private = NULL;
+	struct cam_sensor_power_ctrl_t *power_info = NULL;
+
+	struct platform_device *pdev =
+		container_of(dev, struct platform_device, dev);
+
+	e_ctrl = platform_get_drvdata(pdev);
+	if (!e_ctrl) {
+		CAM_ERR(CAM_EEPROM, "eeprom device is NULL");
+		return 0;
+	}
+
+	soc_private =
+		(struct cam_eeprom_soc_private *)e_ctrl->soc_info.soc_private;
+
+	power_info = &soc_private->power_info;
+	power_info->dev = &pdev->dev;
+	power_info->power_setting = power_setting_array_dc->power_setting_a;
+	power_info->power_down_setting = power_setting_array_dc->power_down_setting_a;
+	power_info->power_setting_size = power_setting_array_dc->size;
+	power_info->power_down_setting_size = power_setting_array_dc->size_down;
+
+	soc_private->i2c_info.slave_addr = SLAVE_ADDRESS;
+	e_ctrl->io_master_info.cci_client->i2c_freq_mode = I2C_FAST_PLUS_MODE;
+	e_ctrl->io_master_info.cci_client->sid = soc_private->i2c_info.slave_addr >> 1;
+	e_ctrl->io_master_info.cci_client->cci_i2c_master = 0;
+
+	CAM_INFO(CAM_EEPROM,
+		"power_setting_size:%d power_down_setting_size:%d slave_addr:0x%x sid:0x%x cci_i2c_master:%d",
+		power_info->power_setting_size,
+		power_info->power_down_setting_size,
+		soc_private->i2c_info.slave_addr,
+		e_ctrl->io_master_info.cci_client->sid,
+		e_ctrl->io_master_info.cci_client->cci_i2c_master);
+
+	rc = cam_eeprom_power_up(e_ctrl, power_info);
+	if (rc < 0) {
+		CAM_ERR(CAM_EEPROM, "Power Up failed for eeprom");
+	}
+
+	cali_flag = read_calibration_flag(e_ctrl);
+
+	CAM_INFO(CAM_EEPROM, "Done: calibration_flag = 0x%x\n", cali_flag);
+
+	rc = cam_eeprom_power_down(e_ctrl);
+	if (rc) {
+		CAM_ERR(CAM_EEPROM, "failed power down rc %d", rc);
+	}
+	return sprintf(buf, "0x%x\n", cali_flag);
+}
+
+ssize_t cam_eeprom_dualcamcali_flag_store(struct device *dev,
+					  struct device_attribute *attr,
+					  const char *buf, size_t count)
+{
+	int value = 0;
+
+	sscanf(buf, "%d", &value);
+	CAM_INFO(CAM_EEPROM, "value %d", value);
+
+	return count;
+}
+
+ssize_t cam_eeprom_dualcamcali_data_show(struct device *dev,
+					 struct device_attribute *attr,
+					 char *buf)
+{
+	return sprintf(buf, "%d\n", buf[0]);
+}
+
+ssize_t cam_eeprom_dualcamcali_data_store(struct device *dev,
+					  struct device_attribute *attr,
+					  const char *buf, size_t count)
+{
+
+#ifndef USE_GKI_CALI_SCHEME
+	int size = -1, cmd = 0;
+#endif
+
+	int rc = -1;
+	struct cam_eeprom_ctrl_t *e_ctrl = NULL;
+	struct cam_eeprom_soc_private *soc_private = NULL;
+	struct cam_sensor_power_ctrl_t *power_info = NULL;
+
+	struct platform_device *pdev =
+		container_of(dev, struct platform_device, dev);
+
+	e_ctrl = platform_get_drvdata(pdev);
+	if (!e_ctrl) {
+		CAM_ERR(CAM_EEPROM, "eeprom device is NULL");
+		return count;
+	}
+
+#ifndef USE_GKI_CALI_SCHEME
+
+	sscanf(buf, "%d", &cmd);
+	if (cmd != CALI_DATA_CMD_WRITE && cmd != CALI_DATA_CMD_CHECK) {
+		CAM_ERR(CAM_EEPROM, "eeprom cmd error");
+		return count;
+	}
+	CAM_INFO(CAM_EEPROM, "read cali data,op cmd=%d", cmd);
+
+	size = read_dualcam_cali_data();
+	if (size <= 0 || size > CALI_DATA_MAX_SIZE) {
+		CAM_ERR(CAM_EEPROM, "Fail to get new calibration data");
+		goto error;
+	}
+
+#else
+
+	CAM_INFO(CAM_EEPROM, "count %d", count);
+	if (count == CALI_DATA_MAX_SIZE) {
+		bin_buffer = kzalloc(CALI_DATA_MAX_SIZE, GFP_KERNEL);
+		if (bin_buffer == NULL) {
+			CAM_ERR(CAM_EEPROM, "malloc memory fail");
+			return count;
+		}
+	}else{
+		CAM_ERR(CAM_EEPROM, "cali file size wrong, needed size:%d, actually size:%d", CALI_DATA_MAX_SIZE, count);
+		return count;
+	}
+
+	memcpy(bin_buffer, buf, CALI_DATA_MAX_SIZE);
+
+#endif
+
+	soc_private =
+		(struct cam_eeprom_soc_private *)e_ctrl->soc_info.soc_private;
+
+	power_info = &soc_private->power_info;
+	power_info->dev = &pdev->dev;
+	power_info->power_setting = power_setting_array_dc->power_setting_a;
+	power_info->power_down_setting = power_setting_array_dc->power_down_setting_a;
+	power_info->power_setting_size = power_setting_array_dc->size;
+	power_info->power_down_setting_size = power_setting_array_dc->size_down;
+
+	soc_private->i2c_info.slave_addr = SLAVE_ADDRESS;
+	e_ctrl->io_master_info.cci_client->i2c_freq_mode = I2C_FAST_PLUS_MODE;
+	e_ctrl->io_master_info.cci_client->sid = soc_private->i2c_info.slave_addr >> 1;
+	e_ctrl->io_master_info.cci_client->cci_i2c_master = 0;
+
+	CAM_INFO(CAM_EEPROM,
+		"power_setting_size:%d power_down_setting_size:%d slave_addr:0x%x sid:0x%x cci_i2c_master:%d",
+		power_info->power_setting_size,
+		power_info->power_down_setting_size,
+		soc_private->i2c_info.slave_addr,
+		e_ctrl->io_master_info.cci_client->sid,
+		e_ctrl->io_master_info.cci_client->cci_i2c_master);
+
+	rc = cam_eeprom_power_up(e_ctrl, power_info);
+	if (rc < 0) {
+		CAM_ERR(CAM_EEPROM, "power up fail, rc:%d", rc);
+		goto error;
+	}
+
+#ifndef USE_GKI_CALI_SCHEME
+
+	if (cmd == CALI_DATA_CMD_WRITE) {
+		rc = write_eeprom_memory(e_ctrl, size);
+		if (rc < 0) {
+			CAM_ERR(CAM_EEPROM, "write eeprom fail, rc:%d", rc);
+			goto error;
+		}
+	}
+
+	if (cmd == CALI_DATA_CMD_CHECK) {
+		rc = calibration_check(e_ctrl);
+		if (rc < 0) {
+			CAM_ERR(CAM_EEPROM, "calibration check fail, rc:%d", rc);
+			goto error;
+		}
+	}
+
+#else
+
+	rc = write_eeprom_memory(e_ctrl, CALI_DATA_MAX_SIZE);
+	if (rc < 0) {
+		CAM_ERR(CAM_EEPROM, "write eeprom fail, rc:%d", rc);
+		goto error;
+	}
+
+#endif
+
+
+	rc = cam_eeprom_power_down(e_ctrl);
+	if (rc) {
+		CAM_ERR(CAM_EEPROM, "power down fail, rc: %d", rc);
+	}
+
+error:
+	kfree(bin_buffer);
+	return count;
+}
+#endif
+/*End   jialiwei/zihao.li for fp5/brementf add dual camera calibration on 20210129*/

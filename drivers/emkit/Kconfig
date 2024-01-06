@@ -1,0 +1,36 @@
+###[ADD][EMKIT]###
+
+config EMKIT_INFO
+	tristate "Detect modules for EMKIT"
+     help
+      Say Y here if you want to generate a sysfs entry for
+      detecting module on Android.
+
+      If unsure, say N.
+
+      To compile this driver as a module, choose M here: the
+      module will be called emkit_info.
+
+config EMKIT_CTRL
+	tristate "Control something for EMKIT"
+     help
+      Say Y here if you want to generate a sysfs entry for
+      controling something on Android.
+
+      If unsure, say N.
+
+      To compile this driver as a module, choose M here: the
+      module will be called emkit_ctrl.
+
+config EMKIT_MDB
+	tristate "Access manufacturing data block for EMKIT"
+     help
+      Say Y here if you want to generate a sysfs entry for
+      accessing MDB area on Android.
+
+      If unsure, say N.
+
+      To compile this driver as a module, choose M here: the
+      module will be called emkit_mdb.
+
+###[END][EMKIT]###

@@ -255,6 +255,13 @@ enum cnss_feature_v01 {
 	CNSS_FEATURE_MAX_VAL_V01 = INT_MAX,
 };
 
+enum wlfw_bdf_dnld_method_v01 {
+	WLFW_BDF_DNLD_METHOD_MIN_VAL_V01 = INT_MIN,
+	WLFW_DIRECT_BDF_COPY_V01 = 0,
+	WLFW_SEND_BDF_OVER_QMI_V01 = 1,
+	WLFW_BDF_DNLD_METHOD_MAX_VAL_V01 = INT_MAX,
+};
+
 #define QMI_WLFW_CE_ATTR_FLAGS_V01 ((u32)0x00)
 #define QMI_WLFW_CE_ATTR_NO_SNOOP_V01 ((u32)0x01)
 #define QMI_WLFW_CE_ATTR_BYTE_SWAP_DATA_V01 ((u32)0x02)
@@ -535,9 +542,11 @@ struct wlfw_cap_resp_msg_v01 {
 	struct wlfw_dev_mem_info_s_v01 dev_mem_info[QMI_WLFW_MAX_DEV_MEM_NUM_V01];
 	u8 foundry_name_valid;
 	char foundry_name[QMI_WLFW_MAX_STR_LEN_V01 + 1];
+	u8 bdf_dnld_method_valid;
+	enum wlfw_bdf_dnld_method_v01 bdf_dnld_method;
 };
 
-#define WLFW_CAP_RESP_MSG_V01_MAX_MSG_LEN 339
+#define WLFW_CAP_RESP_MSG_V01_MAX_MSG_LEN 346
 extern struct qmi_elem_info wlfw_cap_resp_msg_v01_ei[];
 
 struct wlfw_bdf_download_req_msg_v01 {

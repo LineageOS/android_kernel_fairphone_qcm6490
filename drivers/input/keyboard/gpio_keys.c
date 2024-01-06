@@ -1,9 +1,12 @@
-// SPDX-License-Identifier: GPL-2.0-only
 /*
  * Driver for keys on GPIO lines capable of generating interrupts.
  *
  * Copyright 2005 Phil Blundell
  * Copyright 2010, 2011 David Jander <david@protonic.nl>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
  */
 
 #include <linux/module.h>
@@ -28,6 +31,7 @@
 #include <linux/of_irq.h>
 #include <linux/spinlock.h>
 #include <dt-bindings/input/gpio-keys.h>
+#include <linux/pm_wakeup.h> 
 
 struct gpio_button_data {
 	const struct gpio_keys_button *button;
@@ -58,6 +62,27 @@ struct gpio_keys_drvdata {
 	struct gpio_button_data data[0];
 };
 
+// CONFIG_T2M_HALL_SENSOR
+
+struct wakeup_source * gpio_key_wake_src = NULL;
+#define WAKEBYTE_TIMEOUT_MSEC	(800)
+
+#ifdef CONFIG_T2M_HALL_SENSOR
+#include <linux/regulator/consumer.h>
+static void hall_sensor_init(struct device *dev);
+
+struct hall_sensor_data {
+	struct gpio_desc *gpiod;
+	bool active_low;
+	struct regulator *vdd;
+};
+#endif
+
+//#define CONFIG_TCT_LITO_CHICAGO 1 
+
+#ifdef CONFIG_TCT_LITO_CHICAGO
+int hall_sensor_state = 0;
+#endif
 /*
  * SYSFS interface for enabling/disabling keys and switches:
  *
@@ -344,14 +369,47 @@ static DEVICE_ATTR(disabled_switches, S_IWUSR | S_IRUGO,
 		   gpio_keys_show_disabled_switches,
 		   gpio_keys_store_disabled_switches);
 
+#ifdef CONFIG_T2M_HALL_SENSOR
+static ssize_t gpio_keys_show_hall_sensor_status(struct device *dev,
+                struct device_attribute *attr,
+                char *buf)
+{
+    struct platform_device *pdev = to_platform_device(dev);
+    struct gpio_keys_drvdata *ddata = platform_get_drvdata(pdev);
+    int state,gpio_status = 0;
+    int i;
+
+    for (i = 0; i < ddata->pdata->nbuttons; i++) {
+        struct gpio_button_data *bdata = &ddata->data[i];
+
+        if (bdata->button->code == 252)
+        {
+			gpio_status = gpiod_get_value_cansleep(bdata->gpiod);
+            state = (gpio_status ? 1 : 0) ^ bdata->button->active_low;
+            dev_info(dev, "read hall_sensor_status gpio_status = %d  state = %d \n",gpio_status, state);
+            return sprintf(buf, "%s\n", state ? "Close" : "Open");
+        }
+    }
+    return 0;
+}
+static DEVICE_ATTR(hall_sensor_status, S_IRUGO, gpio_keys_show_hall_sensor_status, NULL);
+#endif
+
+
 static struct attribute *gpio_keys_attrs[] = {
 	&dev_attr_keys.attr,
 	&dev_attr_switches.attr,
 	&dev_attr_disabled_keys.attr,
 	&dev_attr_disabled_switches.attr,
+#ifdef CONFIG_T2M_HALL_SENSOR
+    &dev_attr_hall_sensor_status.attr,
+#endif
 	NULL,
 };
-ATTRIBUTE_GROUPS(gpio_keys);
+
+static const struct attribute_group gpio_keys_attr_group = {
+	.attrs = gpio_keys_attrs,
+};
 
 static void gpio_keys_gpio_report_event(struct gpio_button_data *bdata)
 {
@@ -371,7 +429,33 @@ static void gpio_keys_gpio_report_event(struct gpio_button_data *bdata)
 		if (state)
 			input_event(input, type, button->code, button->value);
 	} else {
+#ifdef CONFIG_TCT_LITO_CHICAGO
+		if(*bdata->code == 252 && type == EV_KEY)
+		{
+			dev_err(input->dev.parent, "xuzhibang111 : clamshell state = (%d : %d) \n",hall_sensor_state,state);
+			if(hall_sensor_state == state)
+				return;
+
+			hall_sensor_state = state;
+			if(state) {
+				input_event(input, EV_KEY, 240, 1);
+				input_sync(input);
+				input_event(input, EV_KEY, 240, 0);
+				input_sync(input);
+			}else {
+				input_event(input, EV_KEY, 241, 1);
+				input_sync(input);
+				input_event(input, EV_KEY, 241, 0);
+				input_sync(input);
+			}
+			dev_err(input->dev.parent, "xuzhibang222 : report hall_sensor \n");
+			return;
+		}else {
+			input_event(input, type, *bdata->code, state);
+		}
+#else
 		input_event(input, type, *bdata->code, state);
+#endif
 	}
 	input_sync(input);
 }
@@ -397,6 +481,8 @@ static irqreturn_t gpio_keys_gpio_isr(int irq, void *dev_id)
 		const struct gpio_keys_button *button = bdata->button;
 
 		pm_stay_awake(bdata->input->dev.parent);
+		if(gpio_key_wake_src)
+			__pm_wakeup_event(gpio_key_wake_src, WAKEBYTE_TIMEOUT_MSEC);
 		if (bdata->suspended  &&
 		    (button->type == 0 || button->type == EV_KEY)) {
 			/*
@@ -404,10 +490,13 @@ static irqreturn_t gpio_keys_gpio_isr(int irq, void *dev_id)
 			 * already released by the time we got interrupt
 			 * handler to run.
 			 */
+			
+			
 			input_report_key(bdata->input, button->code, 1);
 		}
 	}
-
+	printk("xuzhibang button->code");
+	
 	mod_delayed_work(system_wq,
 			 &bdata->work,
 			 msecs_to_jiffies(bdata->software_debounce));
@@ -549,6 +638,7 @@ static int gpio_keys_setup_key(struct platform_device *pdev,
 
 		if (button->irq) {
 			bdata->irq = button->irq;
+			//printk("xuzhibang button->irq:%d \n",button->irq);
 		} else {
 			irq = gpiod_to_irq(bdata->gpiod);
 			if (irq < 0) {
@@ -559,8 +649,11 @@ static int gpio_keys_setup_key(struct platform_device *pdev,
 				return error;
 			}
 			bdata->irq = irq;
+			
+			//printk("xuzhibang bdata->irq:%d \n",bdata->irq);
 		}
-
+		
+	
 		INIT_DELAYED_WORK(&bdata->work, gpio_keys_gpio_work_func);
 
 		isr = gpio_keys_gpio_isr;
@@ -612,6 +705,12 @@ static int gpio_keys_setup_key(struct platform_device *pdev,
 	bdata->code = &ddata->keymap[idx];
 	*bdata->code = button->code;
 	input_set_capability(input, button->type ?: EV_KEY, *bdata->code);
+#ifdef CONFIG_TCT_LITO_CHICAGO
+	if(*bdata->code == 252 && button->type == EV_KEY){
+		input_set_capability(input, EV_KEY, 240);
+		input_set_capability(input, EV_KEY, 241);
+	}
+#endif
 
 	/*
 	 * Install custom action to cancel release timer and
@@ -768,6 +867,7 @@ static int gpio_keys_probe(struct platform_device *pdev)
 	struct fwnode_handle *child = NULL;
 	struct gpio_keys_drvdata *ddata;
 	struct input_dev *input;
+	size_t size;
 	int i, error;
 	int wakeup = 0;
 
@@ -777,8 +877,9 @@ static int gpio_keys_probe(struct platform_device *pdev)
 			return PTR_ERR(pdata);
 	}
 
-	ddata = devm_kzalloc(dev, struct_size(ddata, data, pdata->nbuttons),
-			     GFP_KERNEL);
+	size = sizeof(struct gpio_keys_drvdata) +
+			pdata->nbuttons * sizeof(struct gpio_button_data);
+	ddata = devm_kzalloc(dev, size, GFP_KERNEL);
 	if (!ddata) {
 		dev_err(dev, "failed to allocate state\n");
 		return -ENOMEM;
@@ -848,6 +949,13 @@ static int gpio_keys_probe(struct platform_device *pdev)
 
 	fwnode_handle_put(child);
 
+	error = devm_device_add_group(dev, &gpio_keys_attr_group);
+	if (error) {
+		dev_err(dev, "Unable to export keys/switches, error: %d\n",
+			error);
+		return error;
+	}
+
 	error = input_register_device(input);
 	if (error) {
 		dev_err(dev, "Unable to register input device, error: %d\n",
@@ -856,9 +964,72 @@ static int gpio_keys_probe(struct platform_device *pdev)
 	}
 
 	device_init_wakeup(dev, wakeup);
-
+	gpio_key_wake_src = wakeup_source_register(dev,"gpio_key");
+	if(!gpio_key_wake_src)
+		dev_err(dev, "Unable to register wakeup source \n");
+#ifdef CONFIG_T2M_HALL_SENSOR
+    hall_sensor_init(dev);
+#endif
 	return 0;
 }
+
+#ifdef CONFIG_T2M_HALL_SENSOR
+static ssize_t class_hall_sensor_status_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct hall_sensor_data *pdev = dev_get_drvdata(dev);
+	int state;
+
+	state = (gpiod_get_value_cansleep(pdev->gpiod) ? 1 : 0) ^ pdev->active_low;
+
+	return sprintf(buf, "%s\n", state ? "Close" : "Open");
+
+}
+static DEVICE_ATTR(hall_status, 0444, class_hall_sensor_status_show, NULL);
+
+static void hall_sensor_init(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+    struct gpio_keys_drvdata *ddata = platform_get_drvdata(pdev);
+	struct class *hall_class;
+	static struct device * hall_device;
+	struct hall_sensor_data * dhall_sensor;
+	int i,rc;
+
+	hall_class = class_create(THIS_MODULE, "hall_switch");
+
+	hall_device = device_create(hall_class, NULL, 0, NULL, "hall_switch");
+	dhall_sensor = devm_kzalloc(hall_device, sizeof(struct hall_sensor_data), GFP_KERNEL);
+	if (!ddata) {
+		dev_err(hall_device, "failed to allocate state\n");
+		return;
+	}
+	for (i = 0; i < ddata->pdata->nbuttons; i++) {
+		struct gpio_button_data *bdata = &ddata->data[i];
+
+		if (bdata->button->code == 252)
+		{
+			dhall_sensor->gpiod =  bdata->gpiod;
+			dhall_sensor->active_low =  bdata->button->active_low;
+		}
+	}
+    hall_device->driver_data = dhall_sensor;
+#ifdef CONFIG_TCT_LITO_CHICAGO
+	hall_sensor_state = gpiod_get_value_cansleep(dhall_sensor->gpiod);
+#endif
+	device_create_file(hall_device, &dev_attr_hall_status);
+
+    dhall_sensor->vdd = regulator_get(dev, "hall_sensor-vdd");
+    if (IS_ERR_OR_NULL(dhall_sensor->vdd)) {
+        dev_err(hall_device,"get hall_sensor vdd regulator failed");
+        return;
+    }
+    rc = regulator_enable(dhall_sensor->vdd);
+    if (rc) {
+        dev_err(hall_device,"enable hall_sensor vdd regulator failed");
+    }
+}
+#endif
 
 static int __maybe_unused
 gpio_keys_button_enable_wakeup(struct gpio_button_data *bdata)
@@ -1009,6 +1180,7 @@ static void gpio_keys_shutdown(struct platform_device *pdev)
 		dev_err(&pdev->dev, "failed to shutdown\n");
 }
 
+
 static struct platform_driver gpio_keys_device_driver = {
 	.probe		= gpio_keys_probe,
 	.shutdown	= gpio_keys_shutdown,
@@ -1016,7 +1188,6 @@ static struct platform_driver gpio_keys_device_driver = {
 		.name	= "gpio-keys",
 		.pm	= &gpio_keys_pm_ops,
 		.of_match_table = gpio_keys_of_match,
-		.dev_groups	= gpio_keys_groups,
 	}
 };
 

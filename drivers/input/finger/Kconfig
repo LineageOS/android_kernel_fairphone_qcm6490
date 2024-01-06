@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: GPL-2.0-only
+#
+# Fingerprint driver configuration
+#
+menuconfig INPUT_FINGERPRINT
+	bool "Fingerprint"
+	default y
+	help
+	  Say Y here, and a list of supported Fingerprint will be displayed.
+	  This option doesn't affect the kernel.
+
+	  If unsure, say Y.
+
+if INPUT_FINGERPRINT
+
+source "drivers/input/finger/focal_finger/Kconfig"
+
+endif

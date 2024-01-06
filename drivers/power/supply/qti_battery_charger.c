@@ -22,6 +22,23 @@
 #include <linux/soc/qcom/battery_charger.h>
 #include "qti_typec_class.h"
 
+#ifdef CONFIG_QGKI
+/*Add by T2M-xianzhu.zhang for FP5-569 : get battery id value for emkit. [Begin]*/
+#ifdef CONFIG_EMKIT_INFO
+#include <emkit/emkit_info.h>
+#endif
+/*Add by T2M-xianzhu.zhang [End]*/
+#endif
+
+// FP5-935. Build error after GKI built enabled. liquan.zhou.t2m. 202300508
+#ifdef CONFIG_QGKI
+/*Add by T2M-mingwu.zhang for FP5-187 remarks: Touch parameter scene differentiation.[Begin]*/
+#ifdef CONFIG_PROJECT_FP5
+extern void tp_get_usb_online(int online);
+#endif
+/*Add by T2M-mingwu.zhang [End]*/
+#endif //CONFIG_QGKI
+
 #define MSG_OWNER_BC			32778
 #define MSG_TYPE_REQ_RESP		1
 #define MSG_TYPE_NOTIFY			2
@@ -96,6 +113,16 @@ enum battery_property_id {
 	BATT_RESISTANCE,
 	BATT_POWER_NOW,
 	BATT_POWER_AVG,
+	#ifdef CONFIG_QGKI
+	//zxzid add for battery resistance id
+	BATT_RESISTANCE_ID,
+	BATT_USER_FCC,//zxzfcc
+	BATT_DISPLAY_FCC,
+	BATT_SHIP_MODE,//FP5-839 zxzshipmode
+	#ifdef CHARGE_MODE_FCC_SUPPORT
+	BATT_CHGMODE_FCC,
+	#endif
+	#endif
 	BATT_PROP_MAX,
 };
 
@@ -114,6 +141,10 @@ enum usb_property_id {
 	USB_REAL_TYPE,
 	USB_TYPEC_COMPLIANT,
 	USB_SCOPE,
+	#ifdef CONFIG_QGKI
+	USB_TYPEC_CC_ORIENTATION,/*zxzcc add for typec cc orientation*/
+	USB_USER_INPUT_CURR, /*Add by T2M.zhangxianzhu for setting usb_icl by AP, zxzicl*/
+	#endif
 	USB_CONNECTOR_TYPE,
 	USB_PROP_MAX,
 };
@@ -282,6 +313,17 @@ static const int battery_prop_map[BATT_PROP_MAX] = {
 	[BATT_TTE_AVG]		= POWER_SUPPLY_PROP_TIME_TO_EMPTY_AVG,
 	[BATT_POWER_NOW]	= POWER_SUPPLY_PROP_POWER_NOW,
 	[BATT_POWER_AVG]	= POWER_SUPPLY_PROP_POWER_AVG,
+	#ifdef CONFIG_QGKI
+	//zxzid add for battery resistance id
+	[BATT_RESISTANCE_ID]	= POWER_SUPPLY_PROP_RESISTANCE_ID,
+	 /*Add by T2M.zhangxianzhu for setting FCC by AP, zxzfcc*/
+	[BATT_USER_FCC]	= POWER_SUPPLY_PROP_USER_FCC,
+	[BATT_DISPLAY_FCC]	= POWER_SUPPLY_PROP_DISPLAY_FCC,
+	[BATT_SHIP_MODE]	= POWER_SUPPLY_PROP_SHIP_MODE,
+	#ifdef CHARGE_MODE_FCC_SUPPORT
+	[BATT_CHGMODE_FCC]	= POWER_SUPPLY_PROP_CHGMODE_FCC,
+	#endif
+	#endif
 };
 
 static const int usb_prop_map[USB_PROP_MAX] = {
@@ -294,6 +336,10 @@ static const int usb_prop_map[USB_PROP_MAX] = {
 	[USB_ADAP_TYPE]		= POWER_SUPPLY_PROP_USB_TYPE,
 	[USB_TEMP]		= POWER_SUPPLY_PROP_TEMP,
 	[USB_SCOPE]		= POWER_SUPPLY_PROP_SCOPE,
+	#ifdef CONFIG_QGKI
+	[USB_TYPEC_CC_ORIENTATION]		= POWER_SUPPLY_PROP_TYPEC_CC_ORIENTATION,/*zxzcc add for typec cc orientation*/
+	[USB_USER_INPUT_CURR] = POWER_SUPPLY_PROP_USER_INPUT_CURRENT, /*Add by T2M.zhangxianzhu for setting usb_icl by AP, zxzicl*/
+	#endif
 };
 
 static const int wls_prop_map[WLS_PROP_MAX] = {
@@ -957,6 +1003,17 @@ static int usb_psy_get_prop(struct power_supply *psy,
 	if (prop == POWER_SUPPLY_PROP_TEMP)
 		pval->intval = DIV_ROUND_CLOSEST((int)pval->intval, 10);
 
+// FP5-935. Build error after GKI built enabled. liquan.zhou.t2m. 202300508
+#ifdef CONFIG_QGKI
+/*Add by T2M-mingwu.zhang for FP5-187 remarks: Touch parameter scene differentiation.[Begin]*/
+#ifdef CONFIG_PROJECT_FP5
+	if (prop == POWER_SUPPLY_PROP_ONLINE){
+		tp_get_usb_online(pval->intval);
+	}
+#endif
+/*Add by T2M-mingwu.zhang [End]*/
+#endif //CONFIG_QGKI
+
 	return 0;
 }
 
@@ -973,6 +1030,9 @@ static int usb_psy_set_prop(struct power_supply *psy,
 		return prop_id;
 
 	switch (prop) {
+	#ifdef CONFIG_QGKI
+    case POWER_SUPPLY_PROP_USER_INPUT_CURRENT: /*Add by T2M.zhangxianzhu for setting usb_icl by AP, zxzicl*/
+	#endif
 	case POWER_SUPPLY_PROP_INPUT_CURRENT_LIMIT:
 		rc = usb_psy_set_icl(bcdev, prop_id, pval->intval);
 		break;
@@ -987,6 +1047,9 @@ static int usb_psy_prop_is_writeable(struct power_supply *psy,
 		enum power_supply_property prop)
 {
 	switch (prop) {
+	#ifdef CONFIG_QGKI
+	case POWER_SUPPLY_PROP_USER_INPUT_CURRENT: /*Add by T2M.zhangxianzhu for setting usb_icl by AP, zxzicl*/
+	#endif
 	case POWER_SUPPLY_PROP_INPUT_CURRENT_LIMIT:
 		return 1;
 	default:
@@ -1006,6 +1069,10 @@ static enum power_supply_property usb_props[] = {
 	POWER_SUPPLY_PROP_USB_TYPE,
 	POWER_SUPPLY_PROP_TEMP,
 	POWER_SUPPLY_PROP_SCOPE,
+	#ifdef CONFIG_QGKI
+	POWER_SUPPLY_PROP_TYPEC_CC_ORIENTATION,/*zxzcc add for typec cc orientation*/
+	POWER_SUPPLY_PROP_USER_INPUT_CURRENT,/*Add by T2M.zhangxianzhu for setting usb_icl by AP, zxzicl*/
+	#endif
 };
 
 static enum power_supply_usb_type usb_psy_supported_types[] = {
@@ -1085,6 +1152,81 @@ static int battery_psy_set_charge_current(struct battery_chg_dev *bcdev,
 	return rc;
 }
 
+#ifdef CONFIG_QGKI
+//zxzfcc
+static int battery_psy_set_charge_current_by_user(struct battery_chg_dev *bcdev, int val)
+{
+	int rc = 0;
+	u32 fcc_ua = val;
+	rc = write_property_id(bcdev, &bcdev->psy_list[PSY_TYPE_BATTERY], BATT_USER_FCC, fcc_ua);
+    if (rc < 0) {
+		pr_err("%s: Failed to set FCC %u, rc=%d\n", __func__, fcc_ua, rc);
+	}
+    else
+        pr_debug("%s: Set FCC to %u uA\n", __func__, fcc_ua);
+    return rc;
+
+}
+
+static int battery_psy_set_display_charge_current(struct battery_chg_dev *bcdev,
+                    int val)
+{
+	int rc = 0;
+	u32 fcc_ua = val;
+	rc = write_property_id(bcdev, &bcdev->psy_list[PSY_TYPE_BATTERY], BATT_DISPLAY_FCC, fcc_ua);
+    if (rc < 0) {
+		pr_err("%s: Failed to set FCC %u, rc=%d\n", __func__, fcc_ua, rc);
+	}
+    else
+        pr_debug("%s: Set FCC to %u uA\n", __func__, fcc_ua);
+    return rc;
+
+}
+
+#ifdef CHARGE_MODE_FCC_SUPPORT
+#define SLOW_MODE_FCC 1000000 // 2A
+#define NORMAL_MODE_FCC 6000000 // 6A
+static int battery_psy_set_charge_current_by_chgmode(struct battery_chg_dev *bcdev, int val)
+{
+	int rc = 0;
+	u32 fcc_ua = ((val == SLOW_MODE_FCC) ? SLOW_MODE_FCC : NORMAL_MODE_FCC);
+	rc = write_property_id(bcdev, &bcdev->psy_list[PSY_TYPE_BATTERY], BATT_CHGMODE_FCC, fcc_ua);
+	if (rc < 0)
+		pr_err("%s: Failed to set FCC %u, rc=%d\n", __func__, fcc_ua, rc);
+	else
+		pr_info("%s: chgmode:%d, FCC: %u uA\n", __func__, val, fcc_ua);
+	return rc;
+
+}
+#endif
+
+/*FP5-839 Add by T2M.zhangxianzhu,add for set ship mode in AP, zxzshipmode ,Begin */
+static int battery_psy_set_ship_mode(struct battery_chg_dev *bcdev, int val)
+{
+	int rc = 0;
+	u32 ship_mode = val;
+	/*zxz add ,adsp need the value is 0 '#define BATTMNGR_SHIP_MODE_PMIC  0 ' ,  so we force the val to 0 here, if 
+	user set ship mode .
+	*/
+	ship_mode = 0;
+	rc = write_property_id(bcdev, &bcdev->psy_list[PSY_TYPE_BATTERY], BATT_SHIP_MODE, ship_mode);
+    if (rc < 0) {
+		pr_err("%s: Failed to set ship_mode %u, rc=%d\n", __func__, ship_mode, rc);
+	}
+    else
+        pr_debug("%s: Set ship_mode to %u uA\n", __func__, ship_mode);
+    return rc;
+
+}
+/*FP5-839 Add by T2M.zhangxianzhu,End */
+#endif
+
+/* [FP5-1322]-Add-BEGIN by T2M.zhuli 20230615 - Remap health value for upper layer need */
+#define JEITA_HARD_COLD_TEMP (50)
+#define JEITA_SOFT_COLD_TEMP (100)
+#define JEITA_SOFT_HOT_TEMP (450)
+#define JEITA_HARD_HOT_TEMP (550)
+/* [FP5-1322]-Add-END by T2M.zhuli */
 static int battery_psy_get_prop(struct power_supply *psy,
 		enum power_supply_property prop,
 		union power_supply_propval *pval)
@@ -1101,6 +1243,30 @@ static int battery_psy_get_prop(struct power_supply *psy,
 	 */
 	if (prop == POWER_SUPPLY_PROP_TIME_TO_FULL_NOW)
 		prop = POWER_SUPPLY_PROP_TIME_TO_FULL_AVG;
+/* [FP5-1322]-Add-BEGIN by T2M.zhuli 20230615 - Remap health value for upper layer need */
+	else if(prop == POWER_SUPPLY_PROP_HEALTH){
+		prop_id = get_property_id(pst, POWER_SUPPLY_PROP_TEMP);
+		if (prop_id < 0)
+			return prop_id;
+		rc = read_property_id(bcdev, pst, prop_id);
+		if (rc < 0)
+			return rc;
+		pval->intval = DIV_ROUND_CLOSEST((int)pst->prop[prop_id], 10);
+
+		if (pval->intval < JEITA_HARD_COLD_TEMP)
+			pval->intval = POWER_SUPPLY_HEALTH_COLD;
+		else if (pval->intval < JEITA_SOFT_COLD_TEMP)
+			pval->intval = POWER_SUPPLY_HEALTH_COOL;
+		else if (pval->intval < JEITA_SOFT_HOT_TEMP)
+			pval->intval = POWER_SUPPLY_HEALTH_GOOD;
+		else if (pval->intval < JEITA_HARD_HOT_TEMP)
+			pval->intval = POWER_SUPPLY_HEALTH_WARM;
+		else
+			pval->intval = POWER_SUPPLY_HEALTH_OVERHEAT;
+
+		return rc;
+	}
+/* [FP5-1322]-Add-END by T2M.zhuli */
 
 	prop_id = get_property_id(pst, prop);
 	if (prop_id < 0)
@@ -1146,6 +1312,18 @@ static int battery_psy_set_prop(struct power_supply *psy,
 	switch (prop) {
 	case POWER_SUPPLY_PROP_CHARGE_CONTROL_LIMIT:
 		return battery_psy_set_charge_current(bcdev, pval->intval);
+	#ifdef CONFIG_QGKI
+	case POWER_SUPPLY_PROP_USER_FCC://zxzfcc
+		return battery_psy_set_charge_current_by_user(bcdev, pval->intval);
+	case POWER_SUPPLY_PROP_DISPLAY_FCC:
+		return battery_psy_set_display_charge_current(bcdev, pval->intval);
+	case POWER_SUPPLY_PROP_SHIP_MODE://FP5-839 zxzshipmode
+		return battery_psy_set_ship_mode(bcdev, pval->intval);
+#ifdef CHARGE_MODE_FCC_SUPPORT
+	case POWER_SUPPLY_PROP_CHGMODE_FCC:
+		return battery_psy_set_charge_current_by_chgmode(bcdev, pval->intval);
+#endif
+	#endif
 	default:
 		return -EINVAL;
 	}
@@ -1157,6 +1335,14 @@ static int battery_psy_prop_is_writeable(struct power_supply *psy,
 		enum power_supply_property prop)
 {
 	switch (prop) {
+	#ifdef CONFIG_QGKI
+	case POWER_SUPPLY_PROP_USER_FCC://zxzfcc
+	case POWER_SUPPLY_PROP_DISPLAY_FCC:
+	case POWER_SUPPLY_PROP_SHIP_MODE://FP5-839 zxzshipmode
+#ifdef CHARGE_MODE_FCC_SUPPORT
+	case POWER_SUPPLY_PROP_CHGMODE_FCC:
+#endif
+	#endif
 	case POWER_SUPPLY_PROP_CHARGE_CONTROL_LIMIT:
 		return 1;
 	default:
@@ -1190,6 +1376,16 @@ static enum power_supply_property battery_props[] = {
 	POWER_SUPPLY_PROP_TIME_TO_EMPTY_AVG,
 	POWER_SUPPLY_PROP_POWER_NOW,
 	POWER_SUPPLY_PROP_POWER_AVG,
+	#ifdef CONFIG_QGKI
+	/* zxzid add for battery resistance id */
+	POWER_SUPPLY_PROP_RESISTANCE_ID,
+	POWER_SUPPLY_PROP_USER_FCC,//zxzfcc
+	POWER_SUPPLY_PROP_DISPLAY_FCC,
+	POWER_SUPPLY_PROP_SHIP_MODE,//FP5-839 zxzshipmode
+#ifdef CHARGE_MODE_FCC_SUPPORT
+	POWER_SUPPLY_PROP_CHGMODE_FCC,
+#endif
+	#endif
 };
 
 static const struct power_supply_desc batt_psy_desc = {
@@ -1980,6 +2176,30 @@ static int register_extcon_conn_type(struct battery_chg_dev *bcdev)
 	return rc;
 }
 
+#ifdef CONFIG_QGKI
+/*Add by T2M-xianzhu.zhang for FP5-569 : get battery id value for emkit. [Begin]*/
+#ifdef CONFIG_EMKIT_INFO
+static int emkit_get_battery_id(struct battery_chg_dev *bcdev)
+{
+	struct psy_state *pst = &bcdev->psy_list[PSY_TYPE_BATTERY];
+	int rc =0 ;
+    char emkit_buf[16];
+	
+	rc = read_property_id(bcdev, pst, BATT_RESISTANCE_ID);
+	if (rc < 0)
+		return rc;
+
+    rc=scnprintf(emkit_buf, 16, "%u\n", pst->prop[BATT_RESISTANCE_ID]);
+	if (rc < 0)
+		return rc;
+
+    SetModuleName(MODULE_BATTERY_ID, emkit_buf, __FUNCTION__);
+	return rc;
+}
+#endif
+/*Add by T2M-xianzhu.zhang [End]*/
+#endif
+
 static int battery_chg_probe(struct platform_device *pdev)
 {
 	struct battery_chg_dev *bcdev;
@@ -2085,6 +2305,13 @@ static int battery_chg_probe(struct platform_device *pdev)
 
 	schedule_work(&bcdev->usb_type_work);
 
+	#ifdef CONFIG_QGKI
+	/*Add by T2M-xianzhu.zhang for FP5-569 : get battery id value for emkit. [Begin]*/
+	#ifdef CONFIG_EMKIT_INFO
+		emkit_get_battery_id(bcdev);
+	#endif
+	/*Add by T2M-xianzhu.zhang [End]*/
+	#endif
 	return 0;
 error:
 	bcdev->initialized = false;

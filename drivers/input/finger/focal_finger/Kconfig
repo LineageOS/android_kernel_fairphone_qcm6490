@@ -1,0 +1,15 @@
+# SPDX-License-Identifier: GPL-2.0-only
+#
+# Focaltek Fingerprint driver configuration
+#
+
+config FINGER_FOCAL
+	tristate "FINGER FOCAL fingerprint"
+	help
+	  Say Y here if you have a FINGER FOCAL fingerprint and want to enable
+	  support for the built-in touchscreen.
+
+	  If unsure, say N.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called FINGER_FOCAL.

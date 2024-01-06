@@ -15,6 +15,9 @@
 #include <linux/pm.h>
 #include <linux/qcom_scm.h>
 #include <soc/qcom/minidump.h>
+#ifdef CONFIG_USB_REDRIVER_PTN36502
+#include <linux/of_gpio.h>
+#endif
 
 enum qcom_download_dest {
 	QCOM_DOWNLOAD_DEST_UNKNOWN = -1,
@@ -35,11 +38,18 @@ struct qcom_dload {
 
 #define QCOM_DOWNLOAD_BOTHDUMP (QCOM_DOWNLOAD_FULLDUMP | QCOM_DOWNLOAD_MINIDUMP)
 
-static bool enable_dump =
-	IS_ENABLED(CONFIG_POWER_RESET_QCOM_DOWNLOAD_MODE_DEFAULT);
+static bool enable_dump = IS_ENABLED(CONFIG_POWER_RESET_QCOM_DOWNLOAD_MODE_DEFAULT);
 static enum qcom_download_mode current_download_mode = QCOM_DOWNLOAD_NODUMP;
 static enum qcom_download_mode dump_mode = QCOM_DOWNLOAD_FULLDUMP;
 static bool early_pcie_init_enable;
+#ifdef CONFIG_USB_REDRIVER_PTN36502
+extern int redrive_ldo1v8_en;
+#endif
+
+//+ FP5-2606.  Add ramdump debug way on user release. tianwen.zhang@t2mobile.com
+static int t2m_download_enable = 1;
+module_param_named(t2m_download_enable, t2m_download_enable, int, 0664);
+//- FP5-2606.  Add ramdump debug way on user release. tianwen.zhang@t2mobile.com
 
 static int set_download_mode(enum qcom_download_mode mode)
 {
@@ -98,8 +108,9 @@ static int param_set_download_mode(const char *val,
 	ret = param_set_bool(val, kp);
 	if (ret)
 		return ret;
-
-	msm_enable_dump_mode(true);
+	msm_enable_dump_mode(enable_dump);
+	if (!enable_dump)
+		qcom_scm_disable_sdi();
 
 	return 0;
 }
@@ -264,6 +275,9 @@ static int qcom_dload_reboot(struct notifier_block *this, unsigned long event,
 
 	if (cmd) {
 		if (!strcmp(cmd, "edl")) {
+#ifdef CONFIG_USB_REDRIVER_PTN36502
+			gpio_direction_output(redrive_ldo1v8_en,0);
+#endif
 			early_pcie_init_enable ? set_download_mode(QCOM_EDLOAD_PCI_MODE)
 				: set_download_mode(QCOM_DOWNLOAD_EDL);
 		}
@@ -372,6 +386,11 @@ static int qcom_dload_probe(struct platform_device *pdev)
 	store_kaslr_offset();
 	check_pci_edl(pdev->dev.of_node);
 
+      //+ FP5-2606.  Add ramdump debug way . tianwen.zhang@t2mobile
+	if (t2m_download_enable) {
+		enable_dump = 1;
+	}
+      //- FP5-2606.  Add ramdump debug way . tianwen.zhang@t2mobile
 	msm_enable_dump_mode(enable_dump);
 	if (!enable_dump)
 		qcom_scm_disable_sdi();

@@ -874,6 +874,12 @@ endif
 KBUILD_CFLAGS += $(DEBUG_CFLAGS)
 export DEBUG_CFLAGS
 
+#+ FP5-281. Disable ramdump on mini releases. liquan.zhou.t2m. 20230213.
+ifeq ($(T2M_DISABLE_RAMDUMP),true)
+  KBUILD_CFLAGS += -DT2M_DISABLE_RAMDUMP
+endif
+#- FP5-281. Disable ramdump on mini releases. liquan.zhou.t2m. 20230213.
+
 ifdef CONFIG_FUNCTION_TRACER
 ifdef CONFIG_FTRACE_MCOUNT_RECORD
   # gcc 5 supports generating the mcount tables directly

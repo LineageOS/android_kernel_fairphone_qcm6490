@@ -371,6 +371,12 @@ config ARCH_VEXPRESS
 	  This enables support for the ARMv8 software model (Versatile
 	  Express).
 
+config PROJECT_FP5
+       bool "PROJECT_FP5"
+       depends on ARCH_QCOM
+       help
+         Support for PROJECT_FP5
+
 config ARCH_VULCAN
 	def_bool n
 

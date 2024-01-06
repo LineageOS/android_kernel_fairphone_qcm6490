@@ -176,7 +176,9 @@ static int qcom_mhi_qrtr_probe(struct mhi_device *mhi_dev,
 
 	dev_set_drvdata(&mhi_dev->dev, qdev);
 
+/*[Begin] by T2M zhiming.weng 20230210 for [CTSV13.0R2]SENSOR->Device Suspend Tests fail [X1-1317] */
 	rc = qrtr_endpoint_register(&qdev->ep, net_id, rt, NULL);
+/*[End] by T2M zhiming.weng*/
 	if (rc)
 		return rc;
 

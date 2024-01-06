@@ -399,10 +399,19 @@ int fsa4480_switch_event(struct device_node *node,
 					     0x9F);
 		break;
 	case FSA_USBC_ORIENTATION_CC1:
+/* exchange the switch control register value of SBU1 and SBU2 for the IC OCP96011 used in FP5 by yushixian 20230207*/
+#ifdef CONFIG_PROJECT_FP5
+		fsa4480_usbc_update_settings(fsa_priv, 0x78, 0xF8);
+#else
 		fsa4480_usbc_update_settings(fsa_priv, 0x18, 0xF8);
+#endif
 		return fsa4480_validate_display_port_settings(fsa_priv);
 	case FSA_USBC_ORIENTATION_CC2:
+#ifdef CONFIG_PROJECT_FP5
+		fsa4480_usbc_update_settings(fsa_priv, 0x18, 0xF8);
+#else
 		fsa4480_usbc_update_settings(fsa_priv, 0x78, 0xF8);
+#endif
 		return fsa4480_validate_display_port_settings(fsa_priv);
 	case FSA_USBC_DISPLAYPORT_DISCONNECTED:
 		fsa4480_usbc_update_settings(fsa_priv, 0x18, 0x98);

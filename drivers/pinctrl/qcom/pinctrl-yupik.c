@@ -181,10 +181,6 @@ static const struct pinctrl_pin_desc yupik_pins[] = {
 	PINCTRL_PIN(53, "GPIO_53"),
 	PINCTRL_PIN(54, "GPIO_54"),
 	PINCTRL_PIN(55, "GPIO_55"),
-	PINCTRL_PIN(56, "GPIO_56"),
-	PINCTRL_PIN(57, "GPIO_57"),
-	PINCTRL_PIN(58, "GPIO_58"),
-	PINCTRL_PIN(59, "GPIO_59"),
 	PINCTRL_PIN(60, "GPIO_60"),
 	PINCTRL_PIN(61, "GPIO_61"),
 	PINCTRL_PIN(62, "GPIO_62"),
@@ -368,10 +364,6 @@ DECLARE_MSM_GPIO_PINS(52);
 DECLARE_MSM_GPIO_PINS(53);
 DECLARE_MSM_GPIO_PINS(54);
 DECLARE_MSM_GPIO_PINS(55);
-DECLARE_MSM_GPIO_PINS(56);
-DECLARE_MSM_GPIO_PINS(57);
-DECLARE_MSM_GPIO_PINS(58);
-DECLARE_MSM_GPIO_PINS(59);
 DECLARE_MSM_GPIO_PINS(60);
 DECLARE_MSM_GPIO_PINS(61);
 DECLARE_MSM_GPIO_PINS(62);
@@ -705,8 +697,8 @@ static const char * const gpio_groups[] = {
 	"gpio29", "gpio30", "gpio31", "gpio32", "gpio33", "gpio34", "gpio35",
 	"gpio36", "gpio37", "gpio38", "gpio39", "gpio40", "gpio41", "gpio42",
 	"gpio43", "gpio44", "gpio45", "gpio46", "gpio47", "gpio48", "gpio49",
-	"gpio50", "gpio51", "gpio52", "gpio53", "gpio54", "gpio55", "gpio56",
-	"gpio57", "gpio58", "gpio59", "gpio60", "gpio61", "gpio62", "gpio63",
+	"gpio50", "gpio51", "gpio52", "gpio53", "gpio54", "gpio55",
+	"gpio60", "gpio61", "gpio62", "gpio63",
 	"gpio64", "gpio65", "gpio66", "gpio67", "gpio68", "gpio69", "gpio70",
 	"gpio71", "gpio72", "gpio73", "gpio74", "gpio75", "gpio76", "gpio77",
 	"gpio78", "gpio79", "gpio80", "gpio81", "gpio82", "gpio83", "gpio84",
@@ -827,7 +819,7 @@ static const char * const dbg_out_groups[] = {
 	"gpio38",
 };
 static const char * const ddr_bist_groups[] = {
-	"gpio56", "gpio57", "gpio58", "gpio59",
+
 };
 static const char * const ddr_pxi0_groups[] = {
 	"gpio14", "gpio15",
@@ -1110,7 +1102,7 @@ static const char * const qdss_cti_groups[] = {
 	"gpio165", "gpio166",
 };
 static const char * const qdss_gpio_groups[] = {
-	"gpio12", "gpio13", "gpio58", "gpio59",
+	"gpio12", "gpio13",
 };
 static const char * const qdss_gpio0_groups[] = {
 	"gpio2", "gpio101",
@@ -1230,7 +1222,7 @@ static const char * const qup15_groups[] = {
 	"gpio52", "gpio53", "gpio54", "gpio55",
 };
 static const char * const qup16_groups[] = {
-	"gpio50", "gpio56", "gpio57", "gpio58", "gpio59", "gpio62", "gpio63",
+	"gpio50", "gpio62", "gpio63",
 };
 static const char * const qup17_groups[] = {
 	"gpio60", "gpio61", "gpio62", "gpio63",
@@ -1605,14 +1597,6 @@ static const struct msm_pingroup yupik_groups[] = {
 			0xAF004, 1),
 	[55] = PINGROUP(55, qup15, qup14, NA, NA, NA, NA, NA, NA, NA,
 			0xAF004, 2),
-	[56] = PINGROUP(56, qup16, ddr_bist, phase_flag23, NA, NA, NA, NA, NA,
-			NA, 0xAF004, 3),
-	[57] = PINGROUP(57, qup16, ddr_bist, phase_flag22, NA, NA, NA, NA, NA,
-			NA, 0, -1),
-	[58] = PINGROUP(58, qup16, ddr_bist, phase_flag21, qdss_gpio, NA, NA,
-			NA, NA, NA, 0, -1),
-	[59] = PINGROUP(59, qup16, ddr_bist, phase_flag20, qdss_gpio, NA, NA,
-			NA, NA, NA, 0xAF004, 4),
 	[60] = PINGROUP(60, qup17, edp_hot, NA, phase_flag19, NA, NA, NA, NA,
 			NA, 0xAF018, 0),
 	[61] = PINGROUP(61, qup17, sd_write, phase_flag18, tsense_pwm1,
@@ -1807,9 +1791,11 @@ static const struct msm_pingroup yupik_groups[] = {
 	[182] = SDC_QDSD_PINGROUP(sdc2_data, 0x1b4000, 9, 0),
 };
 
+/*Delete by T2M-mingwu.zhang for FP5-129 remarks: liberate gpio50 gpio51. [Begin]*/
 static const int yupik_reserved_gpios[] = {
-	32, 33, 48, 49, 50, 51, -1
+	32, 33, -1
 };
+/*Delete by T2M-mingwu.zhang [End]*/
 static struct pinctrl_qup yupik_qup_regs[] = {
 	QUP_I3C(0, QUP_I3C_0_MODE_OFFSET),
 	QUP_I3C(1, QUP_I3C_1_MODE_OFFSET),
@@ -1825,7 +1811,7 @@ static const struct msm_gpio_wakeirq_map yupik_pdc_map[] = {
 	{ 34, 77 }, { 35, 92 }, { 36, 157 }, { 39, 73 }, { 40, 97 },
 	{ 41, 98 }, { 43, 85 }, { 44, 100 }, { 45, 101 }, { 47, 102 },
 	{ 48, 74 }, { 51, 112 }, { 52, 156 }, { 54, 117 }, { 55, 84 },
-	{ 56, 108 }, { 59, 110 }, { 60, 111 }, { 61, 123 }, { 63, 104 },
+	{ 60, 111 }, { 61, 123 }, { 63, 104 },
 	{ 68, 127 }, { 72, 150 }, { 75, 133 }, { 77, 125 }, { 78, 105 },
 	{ 79, 106 }, { 80, 118 }, { 81, 119 }, { 82, 162 }, { 83, 122 },
 	{ 86, 75 }, { 88, 154 }, { 89, 124 }, { 90, 149 }, { 91, 76 },

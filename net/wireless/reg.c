@@ -1071,9 +1071,24 @@ static int query_regdb_file(const char *alpha2)
 	if (!alpha2)
 		return -ENOMEM;
 
+	/* Modified by yushixian for FP5-1233,When power off charging,it will take a long time to request firmware
+	while this firmware "regulatory.db" exactly not exist,pressing the power key during this time period will 
+	not respond, and the previous operation of pressing the power key after this time period will be recognized
+	as a long press and resulting in a reboot. Notice:"regulatory.db" is no longer used for the db firmware. */
+#ifdef CONFIG_PROJECT_FP5
+	if (strnstr(saved_command_line, "androidboot.mode=", strlen(saved_command_line)) != NULL) {
+		err = 0;
+
+	} else {
+		err = request_firmware_nowait(THIS_MODULE, true, "regulatory.db",
+					      &reg_pdev->dev, GFP_KERNEL,
+					      (void *)alpha2, regdb_fw_cb);
+	}
+#else
 	err = request_firmware_nowait(THIS_MODULE, true, "regulatory.db",
 				      &reg_pdev->dev, GFP_KERNEL,
 				      (void *)alpha2, regdb_fw_cb);
+#endif
 	if (err)
 		kfree(alpha2);
 

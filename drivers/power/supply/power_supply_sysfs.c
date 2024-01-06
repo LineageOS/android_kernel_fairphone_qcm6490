@@ -156,6 +156,15 @@ static struct power_supply_attr power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(CURRENT_BOOT),
 	POWER_SUPPLY_ATTR(POWER_NOW),
 	POWER_SUPPLY_ATTR(POWER_AVG),
+	#ifdef CONFIG_QGKI
+	POWER_SUPPLY_ATTR(RESISTANCE_ID), /* zxzid add for battery resistance id */
+	POWER_SUPPLY_ATTR(USER_FCC), /*Add by T2M.zhangxianzhu for setting FCC by AP, zxzfcc*/
+	POWER_SUPPLY_ATTR(DISPLAY_FCC),
+	POWER_SUPPLY_ATTR(SHIP_MODE), /*FP5-839 Add by T2M.zhangxianzhu for setting ship mode by AP, zxzshipmode*/
+	#ifdef CHARGE_MODE_FCC_SUPPORT
+	POWER_SUPPLY_ATTR(CHGMODE_FCC),
+	#endif
+	#endif
 	POWER_SUPPLY_ATTR(CHARGE_FULL_DESIGN),
 	POWER_SUPPLY_ATTR(CHARGE_EMPTY_DESIGN),
 	POWER_SUPPLY_ATTR(CHARGE_FULL),
@@ -200,6 +209,10 @@ static struct power_supply_attr power_supply_attrs[] = {
 	POWER_SUPPLY_ENUM_ATTR(TYPE),
 	POWER_SUPPLY_ATTR(USB_TYPE),
 	POWER_SUPPLY_ENUM_ATTR(SCOPE),
+	#ifdef CONFIG_QGKI
+	POWER_SUPPLY_ATTR(TYPEC_CC_ORIENTATION),/*zxzcc add for typec cc orientation */
+	POWER_SUPPLY_ATTR(USER_INPUT_CURRENT),  /*Add by T2M.zhangxianzhu for setting usb_icl by AP, zxzicl*/
+	#endif
 	POWER_SUPPLY_ATTR(PRECHARGE_CURRENT),
 	POWER_SUPPLY_ATTR(CHARGE_TERM_CURRENT),
 	POWER_SUPPLY_ATTR(CALIBRATE),

@@ -11,6 +11,3 @@ config AWINIC_HAPTIC_HV
 	  If unsure, say N.
 	  To compile this driver as a module, choose M here: the
 	  module will be called awinic_haptic_hv.
-
-
-

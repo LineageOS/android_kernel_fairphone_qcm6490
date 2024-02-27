@@ -64,11 +64,8 @@ static int qcom_smd_qrtr_probe(struct rpmsg_device *rpdev)
 	struct qrtr_smd_dev *qdev;
 	u32 net_id;
 	bool rt;
-
-/*[Begin] by T2M zhiming.weng 20230210 for [CTSV13.0R2]SENSOR->Device Suspend Tests fail [X1-1317] */
 	int rc, size;
 	u32 *svc_arr = NULL;
-/*[End] by T2M zhiming.weng*/
 	pr_info("%s:Entered\n", __func__);
 
 	qdev = devm_kzalloc(&rpdev->dev, sizeof(*qdev), GFP_KERNEL);
@@ -84,22 +81,19 @@ static int qcom_smd_qrtr_probe(struct rpmsg_device *rpdev)
 		net_id = QRTR_EP_NET_ID_AUTO;
 
 	rt = of_property_read_bool(rpdev->dev.of_node, "qcom,low-latency");
-	//rc = qrtr_endpoint_register(&qdev->ep, net_id, rt);
-/*[Begin] by T2M zhiming.weng 20230210 for [CTSV13.0R2]SENSOR->Device Suspend Tests fail [X1-1317] */
+
 	size = of_property_count_u32_elems(rpdev->dev.of_node, "qcom,non-wake-svc");
+
 	if (size > 0) {
 		if (size > MAX_NON_WAKE_SVC_LEN)
 			size = MAX_NON_WAKE_SVC_LEN;
 		svc_arr = kmalloc_array(size, sizeof(u32), GFP_KERNEL);
 
 		of_property_read_u32_array(rpdev->dev.of_node, "qcom,non-wake-svc",
-					   svc_arr, size);	
+					   svc_arr, size);
 	}
 	rc = qrtr_endpoint_register(&qdev->ep, net_id, rt, svc_arr);
 	kfree(svc_arr);
-
-	kfree(svc_arr);
-/*[End] by T2M zhiming.weng*/
 
 	if (rc)
 		return rc;

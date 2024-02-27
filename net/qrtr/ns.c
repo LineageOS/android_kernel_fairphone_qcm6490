@@ -104,11 +104,7 @@ unsigned int qrtr_get_service_id(unsigned int node_id, unsigned int port_id)
 	struct qrtr_node *node;
 	unsigned long index;
 
-	//node = node_get(node_id);
-/*[Begin] by T2M zhiming.weng 20230210 for [CTSV13.0R2]SENSOR->Device Suspend Tests fail [X1-1317] */
-	node = xa_load(&nodes, node_id);
-/*[End] by T2M zhiming.weng*/
-
+	node = node_get(node_id);
 	if (!node)
 		return 0;
 

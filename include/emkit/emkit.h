@@ -40,7 +40,7 @@ inline static int GetGpioValue(unsigned gpio, const char *label)
 	err = gpio_direction_input(gpio);
 	if (err) {
 		EMLOG_T("EMKIT", "Set GPIO#%d input fail, err=%d", gpio, err);
-        return 0;
+		return 0;
 	}
 
 	value = gpio_get_value_cansleep(gpio);

@@ -179,7 +179,8 @@ static int sde_backlight_device_update_status(struct backlight_device *bd)
 ##				......
 */
 #ifdef CONFIG_PROJECT_FP5
-	if (!strcmp(dsi_display->display_type, "primary")){
+	if (c_conn->connector_type == DRM_MODE_CONNECTOR_DSI &&
+			!strcmp(dsi_display->display_type, "primary")) {
 		if(brightness <= 0){
 			bl_lvl = 0;
 		} else if(brightness >= 1 && brightness <= SDE_CURVE_LIMIT1){

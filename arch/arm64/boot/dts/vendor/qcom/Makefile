@@ -1,3 +1,9 @@
+ifeq ($(CONFIG_PROJECT_FP5),y)
+dtbo-$(CONFIG_ARCH_YUPIK) += \
+	yupik-iot-idp-pm7250b-overlay.dtbo
+
+yupik-iot-idp-pm7250b-overlay.dtbo-base := yupik-iot.dtb
+else
 ifneq ($(CONFIG_ARCH_QTI_VM), y)
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
 dtbo-$(CONFIG_ARCH_LAHAINA) += lahaina-rumi-overlay.dtbo \
@@ -561,6 +567,7 @@ dtb-$(CONFIG_ARCH_DIREWOLF) += direwolf-ivi-rumi.dtb \
 	direwolf-ivi-adp-star.dtb \
 	direwolf-adas-rumi.dtb \
 	direwolf-adas-adp-star.dtb
+endif
 endif
 
 always		:= $(dtb-y)

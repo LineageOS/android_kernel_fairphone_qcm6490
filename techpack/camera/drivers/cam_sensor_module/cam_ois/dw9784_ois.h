@@ -77,8 +77,6 @@ int dw9784_gyro_direction_setting(struct cam_ois_ctrl_t *o_ctrl,int gyro_arrange
 int dw9784_gyro_ofs_calibration(struct cam_ois_ctrl_t *o_ctrl);
 int dw9784_set_cal_store(struct cam_ois_ctrl_t *o_ctrl);
 int dw9784_wait_check_register(struct cam_ois_ctrl_t *o_ctrl,unsigned int reg, unsigned int ref);
-void dw9784_fw_read(struct cam_ois_ctrl_t *o_ctrl);
-void dw9784_flash_if_ram_read(struct cam_ois_ctrl_t *o_ctrl);
 void dw9784_flash_ldt_register_read(struct cam_ois_ctrl_t *o_ctrl);
 int dw9784_module_cal_store(struct cam_ois_ctrl_t *o_ctrl);
 

@@ -1173,52 +1173,6 @@ int dw9784_wait_check_register(struct cam_ois_ctrl_t *o_ctrl,unsigned int reg, u
 	return FUNC_PASS;
 }
 
-void dw9784_fw_read(struct cam_ois_ctrl_t *o_ctrl)
-{
-	/* Read the data of fw memory using register */
-	unsigned int buf_R[10240];
-	int i = 0;
-	printk("dw9784_fw_read");
-	write_reg_16bit_value_16bit(o_ctrl,0xD001, 0x0000); /* dsp mode */
-	os_mdelay(1);
-	dw9784_flash_acess(o_ctrl);
-	/* FW Register Read */
-	for (i = 0; i < 10240; i++)
-	{
-		read_reg_16bit_value_16bit(o_ctrl,0x2000+i, buf_R+i);
-	}
-	
-	for (i = 0; i < 10240; i+= 0x10)
-	{
-		/* log for debug */
-		printk("[dw9784_fw_read] %04X = %04X %04X %04X %04X %04X %04X %04X %04X %04X %04X %04X %04X %04X %04X %04X %04X", 
-		0x2000 + i, buf_R[i + 0], buf_R[i + 1], buf_R[i + 2],buf_R[i + 3],buf_R[i + 4],buf_R[i + 5], buf_R[i + 6], buf_R[i + 7], 
-		buf_R[i + 8], buf_R[i + 9], buf_R[i + 10], buf_R[i + 11], buf_R[i + 12], buf_R[i + 13], buf_R[i + 14], buf_R[i + 15] ); 
-	}
-	dw9784_ois_reset(o_ctrl);
-}
-
-void dw9784_flash_if_ram_read(struct cam_ois_ctrl_t *o_ctrl)
-{
-	/* Read the data of IF memory using RAM register */
-	unsigned int buf_R[640];
-	int i = 0;
-	memset(buf_R, 0, 640 * sizeof(unsigned int));
-
-	for (i = 0; i < 640; i++)
-	{
-		read_reg_16bit_value_16bit(o_ctrl,0x7180+i, buf_R+i);
-	}
-	printk("[dw9784_flash_if_ram_read] IF_Memory Data Log");
-	for (i = 0; i < 640; i+= 0x10)
-	{
-		/* log for debug */
-		printk("[dw9784_flash_if_ram_read] %04X = %04X %04X %04X %04X %04X %04X %04X %04X %04X %04X %04X %04X %04X %04X %04X %04X", 
-		0x7180 + i, buf_R[i + 0], buf_R[i + 1], buf_R[i + 2],buf_R[i + 3],buf_R[i + 4],buf_R[i + 5], buf_R[i + 6], buf_R[i + 7], 
-		buf_R[i + 8], buf_R[i + 9], buf_R[i + 10], buf_R[i + 11], buf_R[i + 12], buf_R[i + 13], buf_R[i + 14], buf_R[i + 15] ); 
-	}
-}
-
 void dw9784_flash_ldt_register_read(struct cam_ois_ctrl_t *o_ctrl)
 {
 	/* Read the data of LDT memory using register */

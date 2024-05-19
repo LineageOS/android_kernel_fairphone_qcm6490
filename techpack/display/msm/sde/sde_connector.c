@@ -184,17 +184,23 @@ static int sde_backlight_device_update_status(struct backlight_device *bd)
 		if(brightness <= 0){
 			bl_lvl = 0;
 		} else if(brightness >= 1 && brightness <= SDE_CURVE_LIMIT1){
-			bl_lvl = (int)(SDE_CURVE_APP_SCALE1 * brightness - SDE_CURVE_APP_COMP1);
+			bl_lvl = 97 * brightness / 10 - SDE_CURVE_APP_COMP1_INT;
 		} else if(brightness > SDE_CURVE_LIMIT1 && brightness <= SDE_CURVE_LIMIT2){
-			bl_lvl = (int)(SDE_CURVE_APP_SCALE2 * brightness - SDE_CURVE_APP_COMP2);
+			bl_lvl = 105 * brightness / 10 - SDE_CURVE_APP_COMP2;
 		} else if(brightness > SDE_CURVE_LIMIT2 && brightness <= SDE_CURVE_LIMIT3){
-			bl_lvl = (int)(SDE_CURVE_APP_SCALE3 * brightness + SDE_CURVE_APP_COMP3);
+			bl_lvl = 116 * brightness / 10 + SDE_CURVE_APP_COMP3;
 		} else if(brightness > SDE_CURVE_LIMIT3 && brightness <= SDE_CURVE_LIMIT4){
-			bl_lvl = (int)(SDE_CURVE_APP_SCALE4 * brightness + SDE_CURVE_APP_COMP4);
+			bl_lvl = 18 * brightness / 10 + SDE_CURVE_APP_COMP4;
+			if (brightness < 634 && brightness % 5)
+				++bl_lvl;
 		} else if(brightness > SDE_CURVE_LIMIT4 && brightness <= SDE_CURVE_LIMIT5){
-			bl_lvl = (int)(SDE_CURVE_APP_SCALE5 * brightness + SDE_CURVE_APP_COMP5);
+			bl_lvl = 51 * brightness / 100 + SDE_CURVE_APP_COMP5;
+			if (brightness % 100)
+				++bl_lvl;
 		} else {
-			bl_lvl = (int)(SDE_CURVE_APP_SCALE6 * brightness + SDE_CURVE_APP_COMP6);
+			bl_lvl = 28 * brightness / 100 + SDE_CURVE_APP_COMP6;
+			if (brightness % 25)
+				++bl_lvl;
 		}
 
 		if (bl_lvl > dsi_display->panel->bl_config.bl_max_level)

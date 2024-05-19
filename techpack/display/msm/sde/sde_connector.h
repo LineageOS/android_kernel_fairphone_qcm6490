@@ -33,16 +33,8 @@
 #define		SDE_CURVE_LIMIT4	633
 #define		SDE_CURVE_LIMIT5	2047
 
-/* APP Curve Scale Factor */
-#define		SDE_CURVE_APP_SCALE1	9.7  
-#define		SDE_CURVE_APP_SCALE2	10.5 
-#define		SDE_CURVE_APP_SCALE3	11.6 
-#define		SDE_CURVE_APP_SCALE4	1.8  
-#define		SDE_CURVE_APP_SCALE5	0.51  
-#define		SDE_CURVE_APP_SCALE6	0.28  
-
 /* APP Curve compensation */
-#define		SDE_CURVE_APP_COMP1		5.7   
+#define		SDE_CURVE_APP_COMP1_INT		6
 #define		SDE_CURVE_APP_COMP2		14   
 #define		SDE_CURVE_APP_COMP3		275   
 #define		SDE_CURVE_APP_COMP4		1528  

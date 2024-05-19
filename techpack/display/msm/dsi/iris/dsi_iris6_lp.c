@@ -40,7 +40,7 @@ static uint8_t iris_abyp_mode;
 static struct semaphore abyp_sem;
 static ktime_t lp_ktime0;
 static int _esd_tolerant_cnt;
-#define FRAME_INTERVAL_RATIO (1.5)
+#define FRAME_INTERVAL_RATIO (15/10)
 
 static u32 _abyp_regs[] = {
 	0xf1100004,

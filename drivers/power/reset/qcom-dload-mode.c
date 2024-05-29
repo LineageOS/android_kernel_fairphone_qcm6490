@@ -47,7 +47,7 @@ extern int redrive_ldo1v8_en;
 #endif
 
 //+ FP5-2606.  Add ramdump debug way on user release. tianwen.zhang@t2mobile.com
-static int t2m_download_enable = 1;
+static int t2m_download_enable = 0;
 module_param_named(t2m_download_enable, t2m_download_enable, int, 0664);
 //- FP5-2606.  Add ramdump debug way on user release. tianwen.zhang@t2mobile.com
 

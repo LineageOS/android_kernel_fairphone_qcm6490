@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "8432e71f_65a12596",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 31604
+      },
+      "writtenOn": "2024-05-30T13:18:15Z",
+      "side": 1,
+      "message": "So far, appears to contribute toward fixing \"Random FP5 soft reboot\" https://gitlab.com/CalyxOS/calyxos/-/issues/2210",
+      "revId": "94eea48b8b0faf4ad68e227f839a3f43ae5c5c27",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}

@@ -82,7 +82,7 @@ static int goodix_ts_switch_config(struct goodix_ts_core *cd, enum GOODIX_IC_CON
 			cd->config_type = type;
 	}
 
-	if (type == CFG_TYPE_CHARGE) {
+	if (type == (enum GOODIX_IC_CONFIG_TYPE)CFG_TYPE_CHARGE) {
 		ts_debug("ready for sending charge cmd ......");
 		ret = cd->hw_ops->write(cd,
 								CUSTOM_ADDR,

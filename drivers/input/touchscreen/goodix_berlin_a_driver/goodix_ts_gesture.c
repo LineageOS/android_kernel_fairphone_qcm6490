@@ -68,7 +68,7 @@ static ssize_t gsx_double_type_show(struct goodix_ext_module *module,
 	}
 
 	return sprintf(buf, "%s\n",
-			(type & GESTURE_DOUBLE_TAP) ? "enable" : "disable");
+			(type & GESTURE_DOUBLE_TAP) ? "1" : "0");
 }
 
 static ssize_t gsx_double_type_store(struct goodix_ext_module *module,

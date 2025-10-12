@@ -833,6 +833,8 @@ static int input_upload_effect(struct input_dev *dev, struct ff_effect *effect,
 		} else if (wav_id > aw_haptic->ram.ram_num && wav_id <= wav_id_max) {
 			aw_haptic->activate_mode = AW_RTP_MODE;
 			aw_haptic->rtp_file_num = wav_id - aw_haptic->ram.ram_num;
+		} else if (wav_id == 0) {
+			aw_haptic->activate_mode = AW_STANDBY_MODE;
 		} else {
 			aw_haptic->activate_mode = AW_STANDBY_MODE;
 			aw_err("waveform id is error");
